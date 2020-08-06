@@ -27,7 +27,8 @@ Performing system checks...
 
 System check identified no issues (0 silenced).
 
-You have 17 unapplied migration(s). Your project may not work properly until you apply the migrations for app(s): admin, auth, contenttypes, sessions.
+You have 17 unapplied migration(s). Your project may not work properly until you apply the migrations for app(s): admin, 
+auth, contenttypes, sessions.
 Run 'python manage.py migrate' to apply them.
 
 August 06, 2020 - 15:32:56
