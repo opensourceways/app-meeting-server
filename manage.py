@@ -2,7 +2,7 @@
 """Django's command-line utility for administrative tasks."""
 import os
 import sys
-from community_meetings_two import settings
+from community_meetings import settings
 
 
 def main():
