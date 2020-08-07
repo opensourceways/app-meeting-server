@@ -2,6 +2,7 @@
 """Django's command-line utility for administrative tasks."""
 import os
 import sys
+from community_meetings_two import settings
 
 
 def main():
@@ -16,8 +17,7 @@ def main():
         ) from exc
     try:
         token = sys.argv[3]
-        with open('C:\\Users\\Administrator\\PycharmProjects\\community_meetings\\token.txt', 'w') as f:
-            f.write(token)
+        settings.zoom_token = token
     except:
         pass
     execute_from_command_line(sys.argv[:2])
