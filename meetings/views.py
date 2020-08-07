@@ -8,7 +8,7 @@ from meetings.serializers import LoginSerializer, GroupSerializer, GroupsSeriali
     MeetingsSerializer
 import requests
 from django.http import JsonResponse
-from community_meetings_two.settings import zoom_token
+from community_meetings.settings import zoom_token
 
 
 token = zoom_token
