@@ -12,9 +12,8 @@ below to quick run server on localhost:
 ```
 # seeting up environment
 make dev-env
-# running on virtualenv
-source meetingserverenv/bin/activate
-python3 manage.py runserver
+# running on virtualenv, several seconds needed for database to be ready
+make run-server
 ```
 
 #### create a project with Pycharm
