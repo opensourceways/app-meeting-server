@@ -16,7 +16,7 @@ def main():
         ) from exc
     try:
         token = sys.argv[3]
-        with open('/Users/liuqi/PycharmProjects/community_meetings/token.txt', 'w') as f:
+        with open('C:\\Users\\Administrator\\PycharmProjects\\community_meetings\\token.txt', 'w') as f:
             f.write(token)
     except:
         pass
