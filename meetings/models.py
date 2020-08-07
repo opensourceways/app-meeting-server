@@ -1,6 +1,4 @@
 from django.db import models
-
-
 # Create your models here.
 
 
@@ -13,12 +11,10 @@ class LoginItem(models.Model):
 class GroupItem(models.Model):
     """SIG组表"""
     group_name = models.CharField('组名', max_length=128, unique=True)
-    # maintainer = models.CharField('维护者', max_length=20)  # 一个组可能有多个maintainer
     description = models.CharField('组描述', max_length=255)
     host_wechat_id = models.CharField('主持人微信id', max_length=128, null=True, blank=True)
     host_email = models.CharField('组主持人邮箱', max_length=128, null=True, blank=True)
-    host_logo = models.CharField('主持人头像logo', max_length=128, null=True, blank=True)  # image
-    # repositories = models.CharField('代码仓', max_length=128)  # 一个组下面对应有多个仓
+    host_logo = models.CharField('主持人头像logo', max_length=128, null=True, blank=True)
     etherpad = models.TextField('etherpad', null=True, blank=True)
 
 
