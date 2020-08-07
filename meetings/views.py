@@ -8,10 +8,10 @@ from meetings.serializers import LoginSerializer, GroupSerializer, GroupsSeriali
     MeetingsSerializer
 import requests
 from django.http import JsonResponse
+from community_meetings_two.settings import zoom_token
 
-from meetings.tests import get_token
 
-
+token = zoom_token
 class LoginView(GenericAPIView, CreateModelMixin):
     serializer_class = LoginSerializer
     queryset = LoginItem.objects.all()
@@ -45,7 +45,6 @@ class GroupView(GenericAPIView, RetrieveModelMixin, UpdateModelMixin, DestroyMod
         return self.destroy(request, *args, **kwargs)
 
 
-token = get_token()
 class MeetingsView(GenericAPIView, ListModelMixin, CreateModelMixin):
     serializer_class = MeetingSerializer
     queryset = MeetingItem.objects.all()
