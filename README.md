@@ -8,14 +8,7 @@ The repository is built for a django project about community meetings.
     mysql:8.0.18
   
 #### install 
-```text
-pip install pymysql
-pip install mysqlclient
-pip install requests
-pip install djangorestframework
-pip install django-cors-headers
-pip install drf-yasg
-```
+`pip install -r requirements.txt`
 
 #### create a project with Pycharm
 File ==> New Project ==> Django:
