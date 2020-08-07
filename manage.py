@@ -15,11 +15,6 @@ def main():
             "available on your PYTHONPATH environment variable? Did you "
             "forget to activate a virtual environment?"
         ) from exc
-    try:
-        token = sys.argv[3]
-        settings.zoom_token = token
-    except:
-        pass
     execute_from_command_line(sys.argv[:2])
 
 

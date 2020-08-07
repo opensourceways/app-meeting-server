@@ -3,6 +3,8 @@ certifi==2020.6.20
 chardet==3.0.4
 coreapi==2.3.3
 coreschema==0.0.4
+cffi==1.14.1
+cryptography==3.0
 Django==3.0.8
 django-cors-headers==3.4.0
 django-simpleui==2020.7
@@ -12,6 +14,7 @@ drf-yasg==1.17.1
 idna==2.10
 inflection==0.5.0
 itypes==1.2.0
+pycparser==2.20
 Jinja2==2.11.2
 MarkupSafe==1.1.1
 mysqlclient==2.0.1
