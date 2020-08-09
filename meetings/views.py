@@ -11,7 +11,6 @@ from django.conf import settings
 from django.http import JsonResponse
 
 
-
 class LoginView(View):
     def get(self, request, *args, **kwargs):
         resp = {}
@@ -41,14 +40,22 @@ class LoginView(View):
         nickname = res['nickname'] if 'nickname' in res else ''
         avatar = res['avatarUrl'] if 'avatarUrl' in res else ''
         gender = res['gender'] if 'gender' in res else 1
-        if not User.objects.filter(openid=openid).first():
+        user = User.objects.filter(openid=openid).first()
+        if not user:
             User.objects.create(
                 nickname = nickname,
                 avatar = avatar,
                 gender = gender,
                 status = 1
             )
+        # 添加token
+        jwt_payload_handler = api_settings.JWT_PAYLOAD_HANDLER
+        jwt_encode_handler = api_settings.JWT_ENCODE_HANDLER
+        payload = jwt_payload_handler(user)
+        token = jwt_encode_handler(payload)
         return JsonResponse({
+            'message': 'success',
+            'token': token,
             'openid': openid,
             'session_key': session_key
         })
