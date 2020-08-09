@@ -2,6 +2,21 @@ from django.db import models
 # Create your models here.
 
 
+class User(models.Model):
+    nickname = models.CharField(verbose_name='昵称', max_length=128, blank=True)
+    avatar = models.ImageField(verbose_name='用户头像', upload_to='image/%Y/%m/%d')
+    gender = models.CharField(verbose_name='性别', max_length=6, choices=((1, '男'), (2, '女')),
+                                default=1)
+    openid = models.CharField(verbose_name='openid', max_length=128, unique=True, null=True, blank=True)
+    unionid = models.CharField(verbose_name='uninon', max_length=128, unique=True, null=True, blank=True)
+    status = models.SmallIntegerField(verbose_name='状态', choices=((1, '登陆'),(0, '未登陆')), default=0)
+    is_admin = models.SmallIntegerField(verbose_name='是否管理员', choices=((1, '是'), (0, '否')), default=0)
+    is_maintainer = models.SmallIntegerField(verbose_name='是否维护者', choices=((1, '是'), (0, '否')), default=0)
+    signature = models.CharField(verbose_name='个性签名', max_length=255, blank=True, null=True)
+    create_time = models.DateTimeField(verbose_name='创建时间', auto_now_add=True)
+    last_login_time = models.DateTimeField(verbose_name='最近登陆时间', auto_now=True)
+
+
 class LoginItem(models.Model):
     """登录表"""
     wechat_id = models.CharField('微信id', max_length=128, unique=True)
