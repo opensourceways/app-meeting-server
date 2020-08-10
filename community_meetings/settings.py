@@ -95,6 +95,11 @@ DATABASES = {
     }
 }
 
+APP_CONF = {
+    'appid': 'wx36f32371c57e97b0',
+    'secret': ''
+}
+
 
 # Password validation
 # https://docs.djangoproject.com/en/2.2/ref/settings/#auth-password-validators

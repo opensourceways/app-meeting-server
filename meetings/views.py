@@ -11,13 +11,54 @@ from django.conf import settings
 from django.http import JsonResponse
 
 
+class LoginView(View):
+    def get(self, request, *args, **kwargs):
+        resp = {}
+        res = request.GET
+        code = request.GET['code']
+        if not code:
+            resp['message'] = '需要code'
+            return JsonResponse(resp)
+        r = requests.get(
+            url='https://api.weixin.qq.com/sns/jscode2session?',
+            params={
+                'appid': settings.APP_CONF['appid'],
+                'secret': settings.APP_CONF['secret'],
+                'js_code': code,
+                'grant_type': 'authorization_code'
+            }
+        ).json()
+        openid = None
+        if openid in r:
+            openid = r['openid']
+        if openid is None:
+            resp['massage'] = '未获取到openid'
+            return JsonResponse(resp)
+        session_key = r['session_key']
 
-class LoginView(GenericAPIView, CreateModelMixin):
-    serializer_class = LoginSerializer
-    queryset = LoginItem.objects.all()
-
-    def post(self, request, *args, **kwargs):
-        return self.create(request, *args, **kwargs)
+        # 判断openid是否在数据库中，有则直接返回openid，session_key，没的话先在数据库创建记录再返回数据
+        nickname = res['nickname'] if 'nickname' in res else ''
+        avatar = res['avatarUrl'] if 'avatarUrl' in res else ''
+        gender = res['gender'] if 'gender' in res else 1
+        user = User.objects.filter(openid=openid).first()
+        if not user:
+            User.objects.create(
+                nickname = nickname,
+                avatar = avatar,
+                gender = gender,
+                status = 1
+            )
+        # 添加token
+        jwt_payload_handler = api_settings.JWT_PAYLOAD_HANDLER
+        jwt_encode_handler = api_settings.JWT_ENCODE_HANDLER
+        payload = jwt_payload_handler(user)
+        token = jwt_encode_handler(payload)
+        return JsonResponse({
+            'message': 'success',
+            'token': token,
+            'openid': openid,
+            'session_key': session_key
+        })
 
 
 class GroupsView(GenericAPIView, ListModelMixin, CreateModelMixin):
