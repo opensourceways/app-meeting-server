@@ -26,7 +26,7 @@ SECRET_KEY = 'jcw0ev%p-nmzlty-(go3i*3g^8%nnvwvz9ca1@@vg&7-fcbi+@'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['0.0.0.0']
+ALLOWED_HOSTS = []
 
 
 # Application definition
@@ -100,6 +100,10 @@ APP_CONF = {
     'secret': ''
 }
 
+MEETING_HOSTS = {
+    'lQuqMBsASruheoqVnh_tsA': 'genedna@hey.com',
+    '0XozZ9F-RWWGLRpBsRFWlg': 'tommylikehu@gmail.com'
+}
 
 # Password validation
 # https://docs.djangoproject.com/en/2.2/ref/settings/#auth-password-validators
