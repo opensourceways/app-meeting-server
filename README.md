@@ -43,4 +43,5 @@ import pymysql
 pymysql.install_as_MySQLdb()
 ```
 - Most APIs may need a token.After all configured you can run `python manage.py runserver 8000 thetoken` to introduce the token.
- 
+- Most time you start the project,may need to run `python manage.py makemigrations` and then run `python manage.py migrate` to ensure running.
+
