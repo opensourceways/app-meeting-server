@@ -114,17 +114,10 @@ class MeetingsView(GenericAPIView, ListModelMixin, CreateModelMixin):
             if response.json()['status'] == 'started':
                 del settings.MEETING_HOSTS[response['host_id']]
                 meetings_id_list.remove(meeting_id)
-        if len(meetings_id_list) == 0:
+        if len(settings.MEETING_HOSTS) == 0:
             return JsonResponse({'code': 1000, 'massage': '无可用host'})
         # 随机取一个可用的host
-        random.shuffle(meetings_id_list)
-        meeting_id = meetings_id_list[0]
-        url = "https://api.zoom.us/v2/meetings/{}".format(meeting_id)
-        headers = {
-            "authorization": "Bearer {}".format(settings.ZOOM_TOKEN)}
-
-        response = requests.request("GET", url, headers=headers)
-        host_email = settings.MEETING_HOSTS[response.json()['host_id']]
+        host_email = random.choice(list(settings.MEETING_HOSTS.values()))
         # 发送post请求，创建会议
         headers = {
             "content-type": "application/json",
