@@ -5,8 +5,7 @@ from rest_framework.mixins import ListModelMixin, CreateModelMixin, RetrieveMode
     UpdateModelMixin
 from rest_framework_simplejwt.settings import api_settings
 from meetings.models import Group, Meeting, User
-from meetings.serializers import GroupSerializer, GroupsSerializer, MeetingSerializer, MeetingsSerializer, \
-    UserSerializer, UsersSerializer
+from meetings.serializers import GroupSerializer, GroupsSerializer, MeetingSerializer, MeetingsSerializer
 import requests
 from django.conf import settings
 from django.http import JsonResponse
@@ -179,17 +178,3 @@ class MeetingView(GenericAPIView, RetrieveModelMixin, DestroyModelMixin):
             return JsonResponse(response.json())
 
 
-class UsersView(GenericAPIView, ListModelMixin):
-    serializer_class = UsersSerializer
-    queryset = Meeting.objects.all()
-
-    def get(self, request, *args, **kwargs):
-        return self.list(request, *args, **kwargs)
-
-
-class UserView(GenericAPIView, UpdateModelMixin):
-    serializer_class = UserSerializer
-    queryset = Meeting.objects.all()
-
-    def get(self, request, *args, **kwargs):
-        return self.update(request, *args, **kwargs)
