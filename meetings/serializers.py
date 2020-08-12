@@ -1,32 +1,31 @@
+from rest_framework import serializers
 from rest_framework.serializers import ModelSerializer
-from meetings.models import LoginItem, GroupItem, MeetingItem
-
-
-class LoginSerializer(ModelSerializer):
-    class Meta:
-        model = LoginItem
-        fields = '__all__'
+from meetings.models import Group, Meeting, User
 
 
 class GroupSerializer(ModelSerializer):
     class Meta:
-        model = GroupItem
+        model = Group
         fields = '__all__'
 
 
 class GroupsSerializer(ModelSerializer):
     class Meta:
-        model = GroupItem
+        model = Group
         fields = '__all__'
 
 
 class MeetingSerializer(ModelSerializer):
+    end_time = serializers.CharField(label='会议结束时间', max_length=255)
+
     class Meta:
-        model = MeetingItem
-        fields = '__all__'
+        model = Meeting
+        fields = ['meeting_id', 'topic', 'start_time', 'end_time', 'timezone', 'password', 'agenda', 'etherpad',
+                  'host_id', 'join_url', 'start_url']
 
 
 class MeetingsSerializer(ModelSerializer):
     class Meta:
-        model = MeetingItem
+        model = Meeting
         fields = '__all__'
+
