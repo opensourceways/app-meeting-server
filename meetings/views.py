@@ -95,35 +95,45 @@ class MeetingsView(GenericAPIView, ListModelMixin, CreateModelMixin):
         return self.list(request, *args, **kwargs)
 
     def post(self, request, *args, **kwargs):
-        # 调用zoom-api查询所有会议
-        headers = {
-            "authorization": "Bearer {}".format(settings.ZOOM_TOKEN)
-        }
-        res = requests.get("https://api.zoom.us/v2/users/genedna@hey.com/meetings", headers=headers)
-        # 将查询出的所有会议的id放入一个list
-        meetings_id_list = []
-        for meeting in res.json()['meetings']:
-            meetings_id_list.append(meeting['id'])
-        # 遍历meetings_id_list，用meeting_id查询单个会议具体信息，若该会议处于开启状态，则查出该会议对应的host，并从MEETING_HOSTS中排除掉
-        for meeting_id in meetings_id_list:
-            url = "https://api.zoom.us/v2/meetings/{}".format(meeting_id)
+        host_dict = settings.MEETING_HOSTS
+        host_list = list(host_dict.values())
+        random.shuffle(host_list)
+        for host in list(host_list):
+            # 调用zoom-api查询所有会议
             headers = {
-                "authorization": "Bearer {}".format(settings.ZOOM_TOKEN)}
+                "authorization": "Bearer {}".format(settings.ZOOM_TOKEN)
+            }
+            res = requests.get("https://api.zoom.us/v2/users/{}/meetings".format(host), headers=headers)
+            # 将查询出的所有会议的id放入一个list
+            meetings_id_list = []
+            for meeting in res.json()['meetings']:
+                meetings_id_list.append(meeting['id'])
+            # 遍历meetings_id_list，用meeting_id查询单个会议具体信息，若该会议处于开启状态，则查出该会议对应的host，并从随机hosts中排除掉
+            for meeting_id in meetings_id_list:
+                url = "https://api.zoom.us/v2/meetings/{}".format(meeting_id)
+                headers = {
+                    "authorization": "Bearer {}".format(settings.ZOOM_TOKEN)}
 
-            response = requests.request("GET", url, headers=headers)
-            if response.json()['status'] == 'started':
-                del settings.MEETING_HOSTS[response['host_id']]
-                meetings_id_list.remove(meeting_id)
-        if len(settings.MEETING_HOSTS) == 0:
-            return JsonResponse({'code': 1000, 'massage': '无可用host'})
+                response = requests.request("GET", url, headers=headers)
+                if response.json()['status'] == 'started':
+                    del host_dict[response.json()['host_id']]
+                    break
+                # meetings_id_list.remove(meeting_id)
+        if len(host_dict) == 0:
+            return JsonResponse({'code': 1000, 'massage': '暂无可用host,请稍后再试'})
         # 随机取一个可用的host
-        host_email = random.choice(list(settings.MEETING_HOSTS.values()))
+        host_email = random.choice(list(host_dict.values()))
         # 发送post请求，创建会议
         headers = {
             "content-type": "application/json",
             "authorization": "Bearer {}".format(settings.ZOOM_TOKEN)
         }
         data = self.request.data
+        date = data['date']
+        start = data['start_time']
+        end = data['end_time']
+        if start >= end:
+            return JsonResponse({'code': 1001, 'massage': '请输入正确的结束时间'})
         url = "https://api.zoom.us/v2/users/{}/meetings".format(host_email)
         response = requests.post(url, data=json.dumps(data), headers=headers)
 

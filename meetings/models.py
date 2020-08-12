@@ -20,9 +20,10 @@ class User(models.Model):
 class Group(models.Model):
     """SIG组表"""
     group_name = models.CharField(verbose_name='组名', max_length=128, unique=True)
+    home_page = models.CharField(verbose_name='首页', max_length=128, null=True, blank=True)
+    app_detail_page = models.CharField(verbose_name='详情页', max_length=128, null=True, blank=True)
+    email = models.EmailField(verbose_name='邮件', null=True, blank=True)
     description = models.CharField(verbose_name='组描述', max_length=255, null=True, blank=True)
-    etherpad = models.TextField(verbose_name='etherpad', null=True, blank=True)
-    read_me = models.CharField(verbose_name='SIG文档', max_length=128, null=True, blank=True)
     user = models.ManyToManyField(User, verbose_name='用户')
 
 
