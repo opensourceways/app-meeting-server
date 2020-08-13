@@ -36,12 +36,12 @@ class LoginView(View):
             resp['massage'] = '未获取到openid'
             return JsonResponse(resp)
         session_key = r['session_key']
-
         # 判断openid是否在数据库中，有则直接返回openid，session_key，没的话先在数据库创建记录再返回数据
         nickname = res['nickname'] if 'nickname' in res else ''
         avatar = res['avatarUrl'] if 'avatarUrl' in res else ''
         gender = res['gender'] if 'gender' in res else 1
         user = User.objects.filter(openid=openid).first()
+        # 如果user不存在，数据库创建user
         if not user:
             User.objects.create(
                 nickname=nickname,
@@ -49,6 +49,12 @@ class LoginView(View):
                 gender=gender,
                 status=1
             )
+        # user存在，数据库更新user
+        User.objects.update(
+            nickname=nickname,
+            avatar=avatar,
+            gender=gender
+        )
         # 添加token
         jwt_payload_handler = api_settings.JWT_PAYLOAD_HANDLER
         jwt_encode_handler = api_settings.JWT_ENCODE_HANDLER
