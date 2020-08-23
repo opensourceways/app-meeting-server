@@ -23,10 +23,10 @@ class Group(models.Model):
     """SIG组表"""
     group_name = models.CharField(verbose_name='组名', max_length=128, unique=True)
     home_page = models.CharField(verbose_name='首页', max_length=128, null=True, blank=True)
-    owners = models.TextField(verbose_name='maintainer列表', null=True, blank=True)
-    app_detail_page = models.CharField(verbose_name='详情页', max_length=128, null=True, blank=True)
-    email = models.EmailField(verbose_name='邮件', null=True, blank=True)
+    maillist = models.EmailField(verbose_name='邮件列表', null=True, blank=True)
     etherpad = models.CharField(verbose_name='etherpad', max_length=255, null=True, blank=True)
+    owners = models.TextField(verbose_name='maintainer列表', null=True, blank=True)
+    app_home_page = models.CharField(verbose_name='app首页', max_length=128, null=True, blank=True)
     description = models.CharField(verbose_name='组描述', max_length=255, null=True, blank=True)
 
     class Meta:
