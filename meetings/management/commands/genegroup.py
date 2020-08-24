@@ -36,15 +36,11 @@ class Command(BaseCommand):
                 maillist = html.xpath('//li[contains(text(), "邮件列表")]/a/@href')[0].replace('mailto:', '')
             except IndexError:
                 try:
-                    maillist = html.xpath('//a[contains(text(), "邮件列表")]/@href')[0].split('/')[-1]
+                    maillist = html.xpath('//a[contains(text(), "邮件列表")]/@href')[0].rstrip('/').split('/')[-1]
                 except IndexError:
                     maillist = 'dev@openeuler.org'
-            if sig[0] == "Virt":
-                maillist = 'virt@openeuler.org'
-            if sig[0] == 'sig-KIRAN-DESKTOP':
-                maillist = 'dev@openeuler.org'
-            if sig[0] == 'sig-ai-bigdata':
-                maillist = 'sig-ai-bigdata@openeuler.org'
+            if not maillist:
+                    maillist = 'dev@openeuler.org'
             sig.append(maillist)
 
             # 获取owners
