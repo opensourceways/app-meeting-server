@@ -59,9 +59,9 @@ class Command(BaseCommand):
             # 查询数据库，如果sig_name不存在，则创建sig信息；如果sig_name存在,则更新sig信息
             if not Group.objects.filter(group_name=sig_name):
                 Group.objects.create(group_name=sig_name, home_page=sig_page, owners=owners, maillist=maillist)
-                self.logger.info("Create sig:")
+                self.logger.info("Create sig: {}".format(sig[0]))
                 self.logger.info(sig)
             else:
                 Group.objects.update(home_page=sig_page, owners=owners, maillist=maillist)
-                self.logger.info("Update sig:")
+                self.logger.info("Update sig: {}".format(sig[0]))
                 self.logger.info(sig)
