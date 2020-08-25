@@ -17,6 +17,9 @@ class User(AbstractBaseUser):
                                      default=1)
     signature = models.CharField(verbose_name='个性签名', max_length=255, blank=True, null=True)
     create_time = models.DateTimeField(verbose_name='创建时间', auto_now_add=True, null=True, blank=True)
+    last_login = models.DateTimeField(verbose_name='上次登录时间', auto_now=True, null=True, blank=True)
+
+    USERNAME_FIELD = 'openid'
 
 
 class Group(models.Model):
@@ -28,9 +31,6 @@ class Group(models.Model):
     owners = models.TextField(verbose_name='maintainer列表', null=True, blank=True)
     app_home_page = models.CharField(verbose_name='app首页', max_length=128, null=True, blank=True)
     description = models.CharField(verbose_name='组描述', max_length=255, null=True, blank=True)
-
-    class Meta:
-        permissions = (('add_meeting', 'Can add meeting'), ('delete_meeting', 'Can delete meeting'),)
 
 
 class GroupUser(models.Model):
