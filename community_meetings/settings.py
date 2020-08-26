@@ -26,13 +26,6 @@ DEBUG = True
 
 ALLOWED_HOSTS = ['*']
 
-APP_CONF = {
- 'appid': 'wx36f32371c57e97b0',
- 'secret': os.getenv('WX_SECRET','dsfgdfg')
-}
-
-SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', 'i#5+@czd)j#9!fne#&=s!+)jrfcjonfdg@qvjna%1r#^*q4^%&')
-
 # Application definition
 
 INSTALLED_APPS = [
