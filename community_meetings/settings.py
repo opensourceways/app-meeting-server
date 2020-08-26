@@ -31,7 +31,7 @@ APP_CONF = {
  'secret': os.getenv('WX_SECRET','dsfgdfg')
 }
 
-SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', 'spim_nu-mq')
+SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', 'i#5+@czd)j#9!fne#&=s!+)jrfcjonfdg@qvjna%1r#^*q4^%&')
 
 # Application definition
 
