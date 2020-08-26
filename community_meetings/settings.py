@@ -26,6 +26,12 @@ DEBUG = True
 
 ALLOWED_HOSTS = ['*']
 
+APP_CONF = {
+ 'appid': 'wx36f32371c57e97b0',
+ 'secret': os.getenv('WX_SECRET','dsfgdfg')
+}
+
+SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', 'spim_nu-mq')
 
 # Application definition
 
