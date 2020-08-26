@@ -1,10 +1,12 @@
 import requests
 from django.conf import settings
 from django.contrib.auth.hashers import make_password
-from rest_framework import serializers
+from rest_framework import serializers, permissions
 from rest_framework.serializers import ModelSerializer
+from rest_framework_simplejwt import authentication
 from rest_framework_simplejwt.tokens import RefreshToken
 from meetings.models import Group, User, Meeting, GroupUser
+from meetings.permissions import AdminPermission
 
 
 # 批量添加成员
@@ -24,11 +26,16 @@ class GroupUserAddSerializer(ModelSerializer):
         return list_ids
 
     def create(self, validated_data):
+        #    user = User.objects.filter(user_id=self.context['request'].user)
+        #    print(user)
+        #    if user.level != 3:
+        #        return serializers.ValidationError('验证失败', code='code_error')
         users = User.objects.filter(id__in=validated_data['ids'])
         group_id = Group.objects.filter(id=validated_data['group_id']).first()
         try:
             for id in users:
                 groupuser = GroupUser.objects.create(group_id=group_id.id, user_id=int(id.id))
+                print('-' * 50)
             return groupuser
         except:
             raise serializers.ValidationError('创建失败！', code='code_error')
@@ -76,7 +83,8 @@ class UserSerializer(ModelSerializer):
 class MeetingSerializer(ModelSerializer):
     class Meta:
         model = Meeting
-        fields = ['id', 'topic', 'sponsor', 'group_name', 'date', 'start', 'end', 'etherpad', 'agenda', 'emaillist', 'user_id', 'group_id']
+        fields = ['id', 'topic', 'sponsor', 'group_name', 'date', 'start', 'end', 'etherpad', 'agenda', 'emaillist',
+                  'user_id', 'group_id']
         extra_kwargs = {
             'mid': {'read_only': True},
             'join_url': {'read_only': True},
@@ -87,7 +95,8 @@ class MeetingSerializer(ModelSerializer):
 class MeetingListSerializer(ModelSerializer):
     class Meta:
         model = Meeting
-        fields = ['id', 'topic', 'sponsor', 'group_name', 'date', 'start', 'end', 'agenda', 'etherpad', 'mid', 'join_url']
+        fields = ['id', 'topic', 'sponsor', 'group_name', 'date', 'start', 'end', 'agenda', 'etherpad', 'mid',
+                  'join_url']
 
 
 class LoginSerializer(serializers.ModelSerializer):
@@ -149,14 +158,13 @@ class LoginSerializer(serializers.ModelSerializer):
         data = super().to_representation(instance)
         refresh = RefreshToken.for_user(instance)
         data['user_id'] = instance.id
-        data['level'] = instance.level
-        data['gitee_name'] = instance.gitee_name
+        # data['level'] = instance.level
+        # data['gitee_name'] = instance.gitee_name
         data['access'] = str(refresh.access_token)
         return data
 
 
 class UsersInGroupSerializer(ModelSerializer):
-
     class Meta:
         model = User
         fields = ['id', 'nickname', 'avatar', 'gitee_name']
@@ -169,3 +177,9 @@ class UserGroupSerializer(ModelSerializer):
     class Meta:
         model = GroupUser
         fields = ['group', 'group_name', 'etherpad']
+
+
+class UserInfoSerializer(ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['level', 'gitee_name']
