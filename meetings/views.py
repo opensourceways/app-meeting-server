@@ -2,6 +2,7 @@ import datetime
 import json
 import random
 import requests
+import logging
 from django.conf import settings
 from django.db.models import Q
 from django.http import JsonResponse
@@ -15,13 +16,17 @@ from meetings.models import User, Group, Meeting, GroupUser
 from meetings.permissions import MaintainerPermission, AdminPermission
 from meetings.serializers import LoginSerializer, GroupsSerializer, MeetingSerializer, UsersSerializer, \
     UserSerializer, GroupUserAddSerializer, GroupSerializer, UsersInGroupSerializer, \
-    UserGroupSerializer
+    UserGroupSerializer, MeetingListSerializer, GroupUserDelSerializer
+
+
+logger = logging.getLogger('log')
 
 
 class LoginView(GenericAPIView, CreateModelMixin, ListModelMixin):
     """用户注册与授权登陆"""
     serializer_class = LoginSerializer
     queryset = User.objects.all()
+
     @swagger_auto_schema(operation_summary='用户注册与授权登陆')
     def post(self, request, *args, **kwargs):
         return self.create(request, *args, **kwargs)
@@ -69,8 +74,8 @@ class UsersIncludeView(GenericAPIView, ListModelMixin):
             ids = [x.user_id for x in groupusers]
             user = User.objects.filter(id__in=ids)
             return user
-        except KeyError as e:
-            logger.warning(e)
+        except KeyError:
+            pass
 
 
 class UsersExcludeView(GenericAPIView, ListModelMixin):
@@ -80,7 +85,7 @@ class UsersExcludeView(GenericAPIView, ListModelMixin):
     filter_backends = [SearchFilter]
     search_fields = ['nickname']
 
-    @swagger_auto_schema(operation_summary='按昵称排序查询不在该组的所有用户')
+    @swagger_auto_schema(operation_summary='查询不在该组的所有用户')
     def get(self, request, *args, **kwargs):
         return self.list(request, *args, **kwargs)
 
@@ -99,6 +104,7 @@ class UserGroupView(GenericAPIView, ListModelMixin):
     serializer_class = UserGroupSerializer
     queryset = GroupUser.objects.all()
 
+    @swagger_auto_schema(operation_summary='查询该用户的SIG组以及该组的etherpad')
     def get(self, request, *args, **kwargs):
         return self.list(request, *args, **kwargs)
 
@@ -121,9 +127,10 @@ class UserView(GenericAPIView, UpdateModelMixin):
         gitee_name = request.data['gitee_name']
         # 有gitee_name,若gitee_name重复则返回；不重复则更新用户信息并将level置为2;gitee_name不存在则将gitee_name置空，level改为1
         if gitee_name:
-            if User.objects.get(gitee_name=gitee_name):
+            if User.objects.filter(gitee_name=gitee_name):
                 return JsonResponse({'code':400, 'msg':'gitee_name重复'})
-            if User.objects.filter(id=id).level == 3:
+           # print(User.objects.get(gitee_name=gitee_name))
+            if User.objects.filter(id=id,level=3):
                 User.objects.filter(id=id).update(gitee_name=gitee_name)
             else:
                 User.objects.filter(id=id).update(gitee_name=gitee_name, level=2)
@@ -136,15 +143,30 @@ class GroupUserAddView(GenericAPIView, CreateModelMixin):
     """SIG组批量新增成员"""
     serializer_class = GroupUserAddSerializer
     queryset = GroupUser.objects.all()
+    authentication_classes = (authentication.JWTAuthentication,)
+    permission_classes = (AdminPermission,)
 
     @swagger_auto_schema(operation_summary='SIG组批量新增成员')
     def post(self, request, *args, **kwargs):
         return self.create(request, *args, **kwargs)
 
 
+class GroupUserDelView(GenericAPIView, CreateModelMixin):
+    """批量删除组成员"""
+    serializer_class = GroupUserDelSerializer
+    queryset = GroupUser.objects.all()
+
+    def post(self, request, *args, **kwargs):
+        group_id = self.request.data.get('group_id')
+        ids = self.request.data.get('ids')
+        ids_list = [int(x) for x in ids.split('-')]
+        GroupUser.objects.filter(group_id=group_id, user_id__in=ids_list).delete()
+        return JsonResponse({'code': 204, 'msg': '删除成功'})
+
+
 class MeetingsWeeklyView(GenericAPIView, ListModelMixin):
     """查询未来一周的所有会议"""
-    serializer_class = MeetingSerializer
+    serializer_class = MeetingListSerializer
     queryset = Meeting.objects.filter(Q(is_delete=0) & (Q(date__gte=str(datetime.datetime.now())[:10]) & Q(date__lte=str(datetime.datetime.now() + datetime.timedelta(days=7))[:10])))
     filter_backends = [SearchFilter]
     search_fields = ['topic', 'group_name']
@@ -156,7 +178,7 @@ class MeetingsWeeklyView(GenericAPIView, ListModelMixin):
 
 class MeetingsInGroupView(GenericAPIView, ListModelMixin):
     """查询该SIG组的未来一周所有会议"""
-    serializer_class = MeetingSerializer
+    serializer_class = MeetingListSerializer
     queryset = Meeting.objects.filter(Q(is_delete=0) & (Q(date__gte=str(datetime.datetime.now())[:10]) & Q(
         date__lte=str(datetime.datetime.now() + datetime.timedelta(days=7))[:10])))
 
@@ -174,7 +196,7 @@ class MeetingsInGroupView(GenericAPIView, ListModelMixin):
 
 class MeetingsDailyView(GenericAPIView, ListModelMixin):
     """查询本日的所有会议"""
-    serializer_class = MeetingSerializer
+    serializer_class = MeetingListSerializer
     queryset = Meeting.objects.all().filter(Q(is_delete=0) & Q(date__exact=str(datetime.datetime.now())[:10]))
 
     @swagger_auto_schema(operation_summary='查询本日的所有会议')
@@ -196,10 +218,15 @@ class MeetingsView(GenericAPIView, CreateModelMixin):
         host_list = list(host_dict.values())
         random.shuffle(host_list)
         for host in list(host_list):
+            print(host)
+            print(settings.ZOOM_TOKEN)
+            import os
+            print(os.getenv('ZOOM_TOKEN'))
             # 调用zoom-api查询所有会议
             headers = {
                 "authorization": "Bearer {}".format(settings.ZOOM_TOKEN)
             }
+            print(headers)
             res = requests.get("https://api.zoom.us/v2/users/{}/meetings".format(host), headers=headers)
             # 将查询出的所有会议的id放入一个list
             if res:
@@ -217,6 +244,8 @@ class MeetingsView(GenericAPIView, CreateModelMixin):
                     if response.json()['status'] == 'started':
                         del host_dict[response.json()['host_id']]
                         break
+            else:
+                return JsonResponse({'code': 1002, 'massage': '请求失败，请重试'})
 
         if len(host_dict) == 0:
             return JsonResponse({'code': 1000, 'massage': '暂无可用host,请稍后再试'})
@@ -232,14 +261,15 @@ class MeetingsView(GenericAPIView, CreateModelMixin):
             date = data['date']
             start = data['start']
             end = data['end']
-            user_id = User.objects.filter(id=data['user_id']).first().id
-            group_id = Group.objects.filter(id=data['group_id']).first().id
-        except:
+            user_id = request.user.id
+            group_id = data['group_id']
+        except Exception as e:
+            logger.error(e)
             return JsonResponse({'code': 1000, 'massage': '创建会议条件不足'})
         if start >= end:
             return JsonResponse({'code': 1001, 'massage': '请输入正确的结束时间'})
         start_time = date + 'T' + start + 'Z'
-        duration = (int(end[:2])-int(start[:2]))* 60 + (int(end[3:5]) - int(start[3:5]))
+        duration = (int(end[:2]) - int(start[:2])) * 60 + (int(end[3:5]) - int(start[3:5]))
         new_data = {}
         new_data['start_time'] = start_time
         new_data['duration'] = duration
@@ -248,10 +278,13 @@ class MeetingsView(GenericAPIView, CreateModelMixin):
         # 数据库生成数据
         Meeting.objects.create(
             mid=response['id'],
-            topic=response['topic'],
+            topic=data['topic'],
+            sponsor=data['sponsor'],
+            group_name=data['group_name'],
             date=date,
             start=start,
             end=end,
+            etherpad=data['etherpad'],
             emaillist=data['emaillist'] if 'emaillist' in data else '',
             timezone=response['timezone'],
             agenda=data['agenda'] if 'agenda' in data else '',
@@ -262,16 +295,20 @@ class MeetingsView(GenericAPIView, CreateModelMixin):
             group_id=group_id
         )
         # 返回请求数据
-        return JsonResponse(response.json())
+        resp = {'code': 201, 'massage': '创建成功'}
+        meeting = Meeting.objects.get(mid=response['id'])
+        resp['id'] = meeting.id
+        return JsonResponse(resp)
 
 
 class MeetingView(GenericAPIView, RetrieveModelMixin):
     """查询会议(id)"""
-    serializer_class = MeetingSerializer
+    serializer_class = MeetingListSerializer
     queryset = Meeting.objects.all()
 
     @swagger_auto_schema(operation_summary='查询会议')
     def get(self, request, *args, **kwargs):
+        print(request)
         return self.retrieve(request, *args, **kwargs)
 
 
