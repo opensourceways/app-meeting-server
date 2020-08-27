@@ -1,3 +1,6 @@
+from rest_framework import permissions
+
+
 class MaintainerPermission(permissions.IsAuthenticated):
     """Maintainer权限"""
     message = '需要Maintainer权限！！！'
