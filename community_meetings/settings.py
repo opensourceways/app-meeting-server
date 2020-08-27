@@ -14,12 +14,23 @@ from datetime import timedelta
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-ZOOM_TOKEN = os.getenv('ZOOM_TOKEN', "")
+ZOOM_TOKEN = os.getenv('ZOOM_TOKEN', '')
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/2.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
+SECRET_KEY = os.getenv('SECRET_KEY', '')
+
+APP_CONF = {
+    'appid': os.getenv('APP_ID', ''),
+    'secret': os.getenv('APP_SECRET', '')
+}
+
+MEETING_HOSTS = {
+    os.getenv('HOST_GENEDNA', ''): 'genedna@hey.com',
+    os.getenv('HOST_TOMMYLIKE', ''): 'tommylikehu@gmail.com'
+}
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
