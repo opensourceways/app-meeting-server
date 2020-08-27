@@ -16,8 +16,7 @@ from meetings.models import User, Group, Meeting, GroupUser
 from meetings.permissions import MaintainerPermission, AdminPermission
 from meetings.serializers import LoginSerializer, GroupsSerializer, MeetingSerializer, UsersSerializer, \
     UserSerializer, GroupUserAddSerializer, GroupSerializer, UsersInGroupSerializer, \
-    UserGroupSerializer, MeetingListSerializer, GroupUserDelSerializer
-
+    UserGroupSerializer, MeetingListSerializer, GroupUserDelSerializer, MeetingDataSerializer, UserInfoSerializer
 
 logger = logging.getLogger('log')
 
@@ -120,6 +119,8 @@ class UserView(GenericAPIView, UpdateModelMixin):
     """更新用户gitee_name"""
     serializer_class = UserSerializer
     queryset = User.objects.all()
+    authentication_classes = (authentication.JWTAuthentication,)
+    permission_classes = (AdminPermission,)
 
     @swagger_auto_schema(operation_summary='更新用户gitee_name')
     def put(self, request, *args, **kwargs):
@@ -128,9 +129,9 @@ class UserView(GenericAPIView, UpdateModelMixin):
         # 有gitee_name,若gitee_name重复则返回；不重复则更新用户信息并将level置为2;gitee_name不存在则将gitee_name置空，level改为1
         if gitee_name:
             if User.objects.filter(gitee_name=gitee_name):
-                return JsonResponse({'code':400, 'msg':'gitee_name重复'})
-           # print(User.objects.get(gitee_name=gitee_name))
-            if User.objects.filter(id=id,level=3):
+                return JsonResponse({'code': 400, 'msg': 'gitee_name重复'})
+            # print(User.objects.get(gitee_name=gitee_name))
+            if User.objects.filter(id=id, level=3):
                 User.objects.filter(id=id).update(gitee_name=gitee_name)
             else:
                 User.objects.filter(id=id).update(gitee_name=gitee_name, level=2)
@@ -155,6 +156,8 @@ class GroupUserDelView(GenericAPIView, CreateModelMixin):
     """批量删除组成员"""
     serializer_class = GroupUserDelSerializer
     queryset = GroupUser.objects.all()
+    authentication_classes = (authentication.JWTAuthentication,)
+    permission_classes = (AdminPermission,)
 
     def post(self, request, *args, **kwargs):
         group_id = self.request.data.get('group_id')
@@ -165,33 +168,17 @@ class GroupUserDelView(GenericAPIView, CreateModelMixin):
 
 
 class MeetingsWeeklyView(GenericAPIView, ListModelMixin):
-    """查询未来一周的所有会议"""
+    """查询前后一周的所有会议"""
     serializer_class = MeetingListSerializer
-    queryset = Meeting.objects.filter(Q(is_delete=0) & (Q(date__gte=str(datetime.datetime.now())[:10]) & Q(date__lte=str(datetime.datetime.now() + datetime.timedelta(days=7))[:10])))
+    queryset = Meeting.objects.filter(Q(is_delete=0) & (Q(
+        date__gte=str(datetime.datetime.now() - datetime.timedelta(days=7))[:10]) & Q(
+        date__lte=str(datetime.datetime.now() + datetime.timedelta(days=7))[:10])))
     filter_backends = [SearchFilter]
     search_fields = ['topic', 'group_name']
 
     @swagger_auto_schema(operation_summary='查询未来一周的所有会议')
     def get(self, request, *args, **kwargs):
         return self.list(request, *args, **kwargs)
-
-
-class MeetingsInGroupView(GenericAPIView, ListModelMixin):
-    """查询该SIG组的未来一周所有会议"""
-    serializer_class = MeetingListSerializer
-    queryset = Meeting.objects.filter(Q(is_delete=0) & (Q(date__gte=str(datetime.datetime.now())[:10]) & Q(
-        date__lte=str(datetime.datetime.now() + datetime.timedelta(days=7))[:10])))
-
-    def get(self, request, *args, **kwargs):
-        return self.list(request, *args, **kwargs)
-
-    def get_queryset(self):
-        try:
-            group_id = self.kwargs['pk']
-            meetings = Meeting.objects.filter(group_id=group_id)
-            return meetings
-        except KeyError:
-            pass
 
 
 class MeetingsDailyView(GenericAPIView, ListModelMixin):
@@ -209,7 +196,7 @@ class MeetingsView(GenericAPIView, CreateModelMixin):
     serializer_class = MeetingSerializer
     queryset = Meeting.objects.all()
     authentication_classes = (authentication.JWTAuthentication,)
-    permission_classes = (MaintainerPermission, )
+    permission_classes = (MaintainerPermission,)
 
     @swagger_auto_schema(operation_summary='创建会议')
     def post(self, request, *args, **kwargs):
@@ -218,15 +205,10 @@ class MeetingsView(GenericAPIView, CreateModelMixin):
         host_list = list(host_dict.values())
         random.shuffle(host_list)
         for host in list(host_list):
-            print(host)
-            print(settings.ZOOM_TOKEN)
-            import os
-            print(os.getenv('ZOOM_TOKEN'))
-            # 调用zoom-api查询所有会议
             headers = {
                 "authorization": "Bearer {}".format(settings.ZOOM_TOKEN)
             }
-            print(headers)
+            # print(headers)
             res = requests.get("https://api.zoom.us/v2/users/{}/meetings".format(host), headers=headers)
             # 将查询出的所有会议的id放入一个list
             if res:
@@ -308,7 +290,6 @@ class MeetingView(GenericAPIView, RetrieveModelMixin):
 
     @swagger_auto_schema(operation_summary='查询会议')
     def get(self, request, *args, **kwargs):
-        print(request)
         return self.retrieve(request, *args, **kwargs)
 
 
@@ -332,3 +313,16 @@ class MeetingDelView(GenericAPIView, DestroyModelMixin):
         # 无论zoom接口删除成功或会议不存在，数据库作逻辑删除
         Meeting.objects.filter(mid=mid).update(is_delete=1)
         return JsonResponse({"code": 204, "massege": "Delete successfully."})
+
+
+class UserInfoView(GenericAPIView, RetrieveModelMixin):
+    serializer_class = UserInfoSerializer
+    queryset = User.objects.all()
+    authentication_classes = (authentication.JWTAuthentication,)
+
+    def get(self, request, *args, **kwargs):
+        user_id = kwargs.get('pk')
+        if user_id != request.user.id:
+            logger.warning('user_id:{}, request.user.id:{}'.format(user_id, request.user.id))
+            return JsonResponse({"code": 400, "massage": "错误操作，信息不匹配！"})
+        return self.retrieve(request, *args, **kwargs)
