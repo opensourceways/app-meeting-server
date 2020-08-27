@@ -335,6 +335,7 @@ class UserInfoView(GenericAPIView, RetrieveModelMixin):
     """查询本机用户的level和gitee_name"""
     serializer_class = UserInfoSerializer
     queryset = User.objects.all()
+    authentication_classes = (authentication.JWTAuthentication,)
 
     def get(self, request, *args, **kwargs):
         user_id = kwargs.get('pk')
