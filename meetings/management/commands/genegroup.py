@@ -17,7 +17,8 @@ class Command(BaseCommand):
         sigs_list = []
         i = 3
         while True:
-            sig_name, sig_page = html.xpath("//div[@id='tree-slider']/div[{}]/div[1]/a/@title".format(i))[0], html.xpath("//div[@id='tree-slider']/div[{}]/div[1]/a/@href".format(i))[0]
+            sig_name = html.xpath("//div[@id='tree-slider']/div[{}]/div[1]/a/@title".format(i))[0]
+            sig_page = html.xpath("//div[@id='tree-slider']/div[{}]/div[1]/a/@href".format(i))[0]
             if sig_name == 'sigs.yaml':
                 break
             # 获取所有sig的名称和页面地址
@@ -25,9 +26,6 @@ class Command(BaseCommand):
             i += 2
 
         for sig in sigs_list:
-            sig_name = sig[0]
-            sig_page = sig[1]
-
             # 获取邮件列表
             r = requests.get(sig[1])
             html = HTML(r.text)
@@ -42,6 +40,21 @@ class Command(BaseCommand):
             if not maillist:
                     maillist = 'dev@openeuler.org'
             sig.append(maillist)
+
+            # 获取IRC频道
+            try:
+                irc = html.xpath('//a[contains(text(), "IRC频道")]/@href')[0]
+            except IndexError:
+                try:
+                    irc = html.xpath('//a[contains(text(), "IRC")]/@href')[0]
+                except IndexError:
+                    try:
+                        irc = html.xpath('//*[contains(text(), "IRC")]/text()')[0].split(':')[1].strip().rstrip(')')
+                    except IndexError:
+                        irc = '#openeuler-dev'
+            if '#' not in irc:
+                irc = '#openeuler-dev'
+            sig.append(irc)
 
             # 获取owners
             url = 'https://gitee.com/openeuler/community/blob/master/sig/{}/OWNERS'.format(sig[0])
@@ -58,10 +71,10 @@ class Command(BaseCommand):
 
             # 查询数据库，如果sig_name不存在，则创建sig信息；如果sig_name存在,则更新sig信息
             if not Group.objects.filter(group_name=sig_name):
-                Group.objects.create(group_name=sig_name, home_page=sig_page, owners=owners, maillist=maillist)
+                Group.objects.create(group_name=sig_name, home_page=sig_page, owners=owners, maillist=maillist, irc=irc)
                 self.logger.info("Create sig: {}".format(sig[0]))
                 self.logger.info(sig)
             else:
-                Group.objects.update(home_page=sig_page, owners=owners, maillist=maillist)
+                Group.objects.update(home_page=sig_page, owners=owners, maillist=maillist, irc=irc)
                 self.logger.info("Update sig: {}".format(sig[0]))
                 self.logger.info(sig)
