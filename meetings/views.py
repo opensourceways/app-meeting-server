@@ -302,7 +302,7 @@ class MeetingsView(GenericAPIView, CreateModelMixin):
 class MeetingView(GenericAPIView, RetrieveModelMixin):
     """查询会议(id)"""
     serializer_class = MeetingListSerializer
-    queryset = Meeting.objects.all()
+    queryset = Meeting.objects.filter(is_delete=0)
 
     @swagger_auto_schema(operation_summary='查询会议')
     def get(self, request, *args, **kwargs):
