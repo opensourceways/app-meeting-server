@@ -1,4 +1,5 @@
 from rest_framework import permissions
+from meetings.models import User
 
 
 class MaintainerPermission(permissions.IsAuthenticated):
