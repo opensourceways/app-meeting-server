@@ -26,6 +26,8 @@ class Command(BaseCommand):
             i += 2
 
         for sig in sigs_list:
+            if sig[0] == 'sig-template':
+                continue
             # 获取邮件列表
             r = requests.get(sig[1])
             html = HTML(r.text)
