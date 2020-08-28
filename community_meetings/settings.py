@@ -16,6 +16,7 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 ZOOM_TOKEN = os.getenv('ZOOM_TOKEN', '')
 
+AUTH_USER_MODEL = 'meetings.User'
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/2.2/howto/deployment/checklist/
 
