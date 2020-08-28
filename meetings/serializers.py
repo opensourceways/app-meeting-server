@@ -144,7 +144,7 @@ class LoginSerializer(serializers.ModelSerializer):
                     password=make_password(openid),
                     openid=openid)
             else:
-                User.objects.update(
+                User.objects.filter(openid=openid).update(
                     nickname=nickname,
                     avatar=avatar,
                     gender=gender)
