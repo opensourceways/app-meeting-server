@@ -95,7 +95,7 @@ class MeetingSerializer(ModelSerializer):
 class MeetingListSerializer(ModelSerializer):
     class Meta:
         model = Meeting
-        fields = ['id', 'topic', 'sponsor', 'group_name', 'date', 'start', 'end', 'agenda', 'etherpad', 'mid',
+        fields = ['id', 'user_id', 'topic', 'sponsor', 'group_name', 'date', 'start', 'end', 'agenda', 'etherpad', 'mid',
                   'join_url']
 
 
