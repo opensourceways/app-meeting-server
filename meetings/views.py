@@ -183,7 +183,7 @@ class MeetingsWeeklyView(GenericAPIView, ListModelMixin):
     serializer_class = MeetingListSerializer
     queryset = Meeting.objects.filter(Q(is_delete=0) & (Q(
         date__gte=str(datetime.datetime.now() - datetime.timedelta(days=7))[:10]) & Q(
-        date__lte=str(datetime.datetime.now() + datetime.timedelta(days=7))[:10])))
+        date__lte=str(datetime.datetime.now() + datetime.timedelta(days=7))[:10]))).order_by('-date', 'start')
     filter_backends = [SearchFilter]
     search_fields = ['topic', 'group_name']
 
@@ -195,7 +195,7 @@ class MeetingsWeeklyView(GenericAPIView, ListModelMixin):
 class MeetingsDailyView(GenericAPIView, ListModelMixin):
     """查询本日的所有会议"""
     serializer_class = MeetingListSerializer
-    queryset = Meeting.objects.all().filter(Q(is_delete=0) & Q(date__exact=str(datetime.datetime.now())[:10]))
+    queryset = Meeting.objects.all().filter(Q(is_delete=0) & Q(date__exact=str(datetime.datetime.now())[:10])).order_by('start')
 
     @swagger_auto_schema(operation_summary='查询本日的所有会议')
     def get(self, request, *args, **kwargs):
