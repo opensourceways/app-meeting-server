@@ -344,3 +344,69 @@ class UserInfoView(GenericAPIView, RetrieveModelMixin):
             logger.warning('user_id:{}, request.user.id:{}'.format(user_id, request.user.id))
             return JsonResponse({"code": 400, "massage": "错误操作，信息不匹配！"})
         return self.retrieve(request, *args, **kwargs)
+
+
+class MeetingsDataView(GenericAPIView, ListModelMixin):
+    """网页日历数据"""
+    serializer_class = MeetingsDataSerializer
+    queryset = Meeting.objects.filter(is_delete=0).order_by('start')
+
+    def get(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset()).values()
+        tableData = []
+        date_list = []
+        for query in queryset:
+            date_list.append(query.get('date'))
+        date_list = sorted(list(set(date_list)))
+        for date in date_list:
+            tableData.append(
+                {
+                'date': date,
+                'timeData': [{
+                    'id': meeting.id,
+                    'group_name': meeting.group_name,
+                    'startTime': meeting.start,
+                    'endTime': meeting.end,
+                    'duration': int(meeting.end.split(':')[0]) - int(meeting.start.split(':')[0]) if meeting.end.split(':')[1] == '00' else int(meeting.end.split(':')[0]) - int(meeting.start.split(':')[0]) + 1,
+                    'duration_time': meeting.start.split(':')[0] + ':00' + '-' + meeting.end.split(':')[0] + ':00' if meeting.end.split(':')[1] == '00' else meeting.start.split(':')[0] + ':00' + '-' + str(int(meeting.end.split(':')[0]) + 1) + ':00',
+                    'name': meeting.topic,
+                    'creator': meeting.sponsor,
+                    'detail': meeting.agenda,
+                    'url': User.objects.get(id=meeting.user_id).avatar
+                } for meeting in Meeting.objects.filter(is_delete=0, date=date)]
+            })
+        return Response({'tableData': tableData})
+
+
+class SigMeetingsDataView(GenericAPIView, ListModelMixin):
+    """网页SIG组日历数据"""
+    serializer_class = MeetingsDataSerializer
+    queryset = Meeting.objects.filter(is_delete=0).order_by('date', 'start')
+
+    def get(self, request, *args, **kwargs):
+        group_id = kwargs.get('pk')
+        queryset = self.filter_queryset(self.get_queryset()).values()
+        tableData = []
+        date_list = []
+        for query in queryset:
+            date_list.append(query.get('date'))
+        date_list = sorted(list(set(date_list)))
+        for date in date_list:
+            tableData.append(
+                {
+                    'date': date,
+                    'timeData': [{
+                        'id': meeting.id,
+                        'group_name': meeting.group_name,
+                        'date': meeting.date,
+                        'startTime': meeting.start,
+                        'endTime': meeting.end,
+                        'duration': int(meeting.end.split(':')[0]) - int(meeting.start.split(':')[0]) if meeting.end.split(':')[1] == '00' else int(meeting.end.split(':')[0]) - int(meeting.start.split(':')[0]) + 1,
+                        'duration_time': meeting.start.split(':')[0] + ':00' + '-' + meeting.end.split(':')[0] + ':00' if meeting.end.split(':')[1] == '00' else meeting.start.split(':')[0] + ':00' + '-' + str(int(meeting.end.split(':')[0]) + 1) + ':00',
+                        'name': meeting.topic,
+                        'creator': meeting.sponsor,
+                        'detail': meeting.agenda,
+                        'url': User.objects.get(id=meeting.user_id).avatar
+                    } for meeting in Meeting.objects.filter(is_delete=0, group_id=group_id, date=date)]
+                })
+        return Response({'tableData': tableData})
