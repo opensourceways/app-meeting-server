@@ -199,3 +199,12 @@ class SigsSerializer(ModelSerializer):
     class Meta:
         model = Group
         fields = ['id', 'group_name', 'home_page', 'maillist', 'irc', 'groupuser_set']
+
+
+class MeetingsDataSerializer(ModelSerializer):
+    avatar = serializers.CharField(source='user.avatar', max_length=255, read_only=True)
+
+    class Meta:
+        model = Meeting
+        fields = ('id', 'date', 'start', 'end', 'duration', 'avatar')
+
