@@ -181,122 +181,27 @@ class GroupUserDelView(GenericAPIView, CreateModelMixin):
 class MeetingsWeeklyView(GenericAPIView, ListModelMixin):
     """查询前后一周的所有会议"""
     serializer_class = MeetingListSerializer
-    queryset = Meeting.objects.filter(Q(is_delete=0) & (Q(
-        date__gte=str(datetime.datetime.now() - datetime.timedelta(days=7))[:10]) & Q(
-        date__lte=str(datetime.datetime.now() + datetime.timedelta(days=7))[:10]))).order_by('-date', 'start')
+    queryset = Meeting.objects.filter(is_delete=0)
     filter_backends = [SearchFilter]
     search_fields = ['topic', 'group_name']
 
-    @swagger_auto_schema(operation_summary='查询未来一周的所有会议')
+    @swagger_auto_schema(operation_summary='查询前后一周的所有会议')
     def get(self, request, *args, **kwargs):
+        self.queryset = self.queryset.filter((Q(
+        date__gte=str(datetime.datetime.now() - datetime.timedelta(days=7))[:10]) & Q(
+        date__lte=str(datetime.datetime.now() + datetime.timedelta(days=7))[:10]))).order_by('-date', 'start')
         return self.list(request, *args, **kwargs)
 
 
 class MeetingsDailyView(GenericAPIView, ListModelMixin):
     """查询本日的所有会议"""
     serializer_class = MeetingListSerializer
-    queryset = Meeting.objects.all().filter(Q(is_delete=0) & Q(date__exact=str(datetime.datetime.now())[:10])).order_by('start')
+    queryset = Meeting.objects.filter(is_delete=0)
 
     @swagger_auto_schema(operation_summary='查询本日的所有会议')
     def get(self, request, *args, **kwargs):
+        self.queryset = self.queryset.filter(date=str(datetime.datetime.now())[:10]).order_by('start')
         return self.list(request, *args, **kwargs)
-
-
-class MeetingsView(GenericAPIView, CreateModelMixin):
-    """创建会议"""
-    serializer_class = MeetingSerializer
-    queryset = Meeting.objects.all()
-    authentication_classes = (authentication.JWTAuthentication,)
-    permission_classes = (MaintainerPermission,)
-
-    @swagger_auto_schema(operation_summary='创建会议')
-    def post(self, request, *args, **kwargs):
-        host_dict = settings.MEETING_HOSTS
-        host_list = list(host_dict.values())
-        random.shuffle(host_list)
-        for host in list(host_list):
-            headers = {
-                "authorization": "Bearer {}".format(settings.ZOOM_TOKEN)
-            }
-            res = requests.get("https://api.zoom.us/v2/users/{}/meetings".format(host), headers=headers)
-            # 将查询出的所有会议的id放入一个list
-            if res:
-                meetings_id_list = []
-                for meeting in res.json()['meetings']:
-                    meetings_id_list.append(meeting['id'])
-                # 遍历meetings_id_list，用meeting_id查询单个会议具体信息，若该会议处于开启状态，则查出该会议对应的host，并从随机hosts中排除掉
-                for meeting_id in meetings_id_list:
-                    url = "https://api.zoom.us/v2/meetings/{}".format(meeting_id)
-                    headers = {
-                        "authorization": "Bearer {}".format(settings.ZOOM_TOKEN)}
-                    response = requests.request("GET", url, headers=headers)
-                    if response.json()['status'] == 'started':
-                        del host_dict[response.json()['host_id']]
-                        break
-            else:
-                logger.warning('Failed to request.')
-                return JsonResponse({'code': 1002, 'massage': '请求失败，请重试'})
-        if len(host_dict) == 0:
-            logger.warning('There is no host to create a meeting at the moment.')
-            return JsonResponse({'code': 1000, 'massage': '暂无可用host,请稍后再试'})
-        # 随机取一个可用的host
-        host_email = random.choice(list(host_dict.values()))
-        # 发送post请求，创建会议
-        headers = {
-            "content-type": "application/json",
-            "authorization": "Bearer {}".format(settings.ZOOM_TOKEN)
-        }
-        try:
-            data = self.request.data
-            date = data['date']
-            start = data['start']
-            end = data['end']
-            user_id = request.user.id
-            group_id = data['group_id']
-        except Exception as e:
-            logger.error(e)
-            return JsonResponse({'code': 1000, 'massage': '创建会议条件不足'})
-        if start >= end:
-            logger.warning('The end time must be greater than the start time.')
-            return JsonResponse({'code': 1001, 'massage': '请输入正确的结束时间'})
-        if int(start.split(':')[0]) >= 8:
-            start_time = date + 'T' + str(int(start.split(':')[0]) - 8) + ':00:00Z'
-        else:
-            d = datetime.datetime.strptime(date, '%Y-%m-%d') - datetime.timedelta(days=1)
-            date = datetime.datetime.strftime(d, '%Y-%m-%d %H%M%S')[:10]
-            start_time = date + 'T' + str(int(start.split(':')[0]) + 16) + ':00:00Z'
-        duration = (int(end.split(':')[0]) - int(start.split(':')[0])) * 60 + (
-                    int(end.split(':')[1]) - int(start.split(':')[1]))
-        new_data = {}
-        new_data['start_time'] = start_time
-        new_data['duration'] = duration
-        url = "https://api.zoom.us/v2/users/{}/meetings".format(host_email)
-        response = requests.post(url, data=json.dumps(new_data), headers=headers).json()
-        # 数据库生成数据
-        Meeting.objects.create(
-            mid=response['id'],
-            topic=data['topic'],
-            sponsor=data['sponsor'],
-            group_name=data['group_name'],
-            date=date,
-            start=start,
-            end=end,
-            etherpad=data['etherpad'],
-            emaillist=data['emaillist'] if 'emaillist' in data else '',
-            timezone=response['timezone'],
-            agenda=data['agenda'] if 'agenda' in data else '',
-            host_id=response['host_id'],
-            join_url=response['join_url'],
-            start_url=response['start_url'],
-            user_id=user_id,
-            group_id=group_id
-        )
-        logger.info('{} has created a meeting which mid is {}.'.format(data['sponsor'], response['id']))
-        # 返回请求数据
-        resp = {'code': 201, 'massage': '创建成功'}
-        meeting = Meeting.objects.get(mid=response['id'])
-        resp['id'] = meeting.id
-        return JsonResponse(resp)
 
 
 class MeetingView(GenericAPIView, RetrieveModelMixin):
@@ -410,3 +315,95 @@ class SigMeetingsDataView(GenericAPIView, ListModelMixin):
                     } for meeting in Meeting.objects.filter(is_delete=0, group_id=group_id, date=date)]
                 })
         return Response({'tableData': tableData})
+
+
+class MeetingsView(GenericAPIView, CreateModelMixin):
+    """创建会议"""
+    serializer_class = MeetingSerializer
+    queryset = Meeting.objects.all()
+    authentication_classes = (authentication.JWTAuthentication,)
+    permission_classes = (MaintainerPermission,)
+
+    @swagger_auto_schema(operation_summary='创建会议')
+    def post(self, request, *args, **kwargs):
+        import time
+        t1 = time.time()
+        host_dict = settings.MEETING_HOSTS
+        # 获取data
+        data = self.request.data
+        date = data['date']
+        start = data['start']
+        end = data['end']
+        user_id = request.user.id
+        group_id = data['group_id']
+        if start >= end:
+            logger.warning('The end time must be greater than the start time.')
+            return JsonResponse({'code': 1001, 'massage': '请输入正确的结束时间'})
+        start_search = str(int(start.split(':')[0]) - 1) + ':00'
+        end_search = str(int(end.split(':')[0]) + 1) + ':00'
+        # 查询待创建的会议与现有的预定会议是否冲突
+        meetings = Meeting.objects.filter(is_delete=0, date=date, start__gte=start_search, end__lte=end_search).values()
+        try:
+            for meeting in meetings:
+                print('meeting: {}'.format(meeting))
+                host_id = meeting.host_id
+                del host_dict[host_id]
+        except Exception:
+            logger.info('当天此时段无host占用')
+        if len(host_dict) == 0:
+            logger.warning('暂无可用host')
+            return JsonResponse({'code': 1000, 'massage': '暂无可用host,请前往官网查看预定会议'})
+        # 从过滤后的host_dict中随机生成一个host
+        print('host_dict: {}'.format(host_dict))
+        host = random.choice(list(host_dict.values()))
+        t2 = time.time()
+        print('get host waste time: {}'.format(t2-t1))
+        # start_time拼接
+        if int(start.split(':')[0]) >= 8:
+            start_time = date + 'T' + str(int(start.split(':')[0]) - 8) + ':00:00Z'
+        else:
+            d = datetime.datetime.strptime(date, '%Y-%m-%d') - datetime.timedelta(days=1)
+            date = datetime.datetime.strftime(d, '%Y-%m-%d %H%M%S')[:10]
+            start_time = date + 'T' + str(int(start.split(':')[0]) + 16) + ':00:00Z'
+        # 计算duration
+        duration = (int(end.split(':')[0]) - int(start.split(':')[0])) * 60 + (
+                int(end.split(':')[1]) - int(start.split(':')[1]))
+        # 准备好调用zoom api的data
+        new_data = {}
+        new_data['start_time'] = start_time
+        new_data['duration'] = duration
+        headers = {
+            "content-type": "application/json",
+            "authorization": "Bearer {}".format(settings.ZOOM_TOKEN)
+        }
+        url = "https://api.zoom.us/v2/users/{}/meetings".format(host)
+        # 发送post请求，创建会议
+        response = requests.post(url, data=json.dumps(new_data), headers=headers).json()
+        # 数据库生成数据
+        Meeting.objects.create(
+            mid=response['id'],
+            topic=data['topic'],
+            sponsor=data['sponsor'],
+            group_name=data['group_name'],
+            date=date,
+            start=start,
+            end=end,
+            etherpad=data['etherpad'],
+            emaillist=data['emaillist'] if 'emaillist' in data else '',
+            timezone=response['timezone'],
+            agenda=data['agenda'] if 'agenda' in data else '',
+            host_id=response['host_id'],
+            join_url=response['join_url'],
+            start_url=response['start_url'],
+            user_id=user_id,
+            group_id=group_id
+        )
+        logger.info('{} has created a meeting which mid is {}.'.format(data['sponsor'], response['id']))
+        # 返回请求数据
+        resp = {'code': 201, 'massage': '创建成功'}
+        meeting = Meeting.objects.get(mid=response['id'])
+        resp['id'] = meeting.id
+        t3 = time.time()
+        print('total waste: {}'.format(t3-t1))
+        return JsonResponse(resp)
+
