@@ -18,7 +18,8 @@ from meetings.permissions import MaintainerPermission, AdminPermission
 from meetings.serializers import LoginSerializer, GroupsSerializer, MeetingSerializer, UsersSerializer, \
     UserSerializer, GroupUserAddSerializer, GroupSerializer, UsersInGroupSerializer, \
     UserGroupSerializer, MeetingListSerializer, GroupUserDelSerializer, UserInfoSerializer, \
-    SigsSerializer
+    SigsSerializer, MeetingsDataSerializer
+from rest_framework.response import Response
 
 
 logger = logging.getLogger('log')
