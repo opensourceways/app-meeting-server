@@ -278,7 +278,7 @@ class SigMeetingsDataView(GenericAPIView, ListModelMixin):
     serializer_class = MeetingsDataSerializer
     queryset = Meeting.objects.filter(is_delete=0).order_by('date', 'start')
 
-    ef get(self, request, *args, **kwargs):
+    def get(self, request, *args, **kwargs):
         group_id = kwargs.get('pk')
         queryset = self.filter_queryset(self.get_queryset()).values()
         tableData = []
