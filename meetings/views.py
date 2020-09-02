@@ -1,5 +1,6 @@
 import datetime
 import json
+import math
 import random
 import requests
 import logging
@@ -135,19 +136,6 @@ class UserView(GenericAPIView, UpdateModelMixin):
 
     @swagger_auto_schema(operation_summary='更新用户gitee_name')
     def put(self, request, *args, **kwargs):
-        id = kwargs.get('pk')
-        gitee_name = request.data['gitee_name']
-
-        if gitee_name:
-            if User.objects.filter(gitee_name=gitee_name):
-                logger.warning('The gitee_name {} has been taken'.format(gitee_name))
-                return JsonResponse({'code': 400, 'msg': 'gitee_name重复'})
-            if User.objects.filter(id=id, level=3):
-                User.objects.filter(id=id).update(gitee_name=gitee_name)
-            else:
-                User.objects.filter(id=id).update(gitee_name=gitee_name, level=2)
-        else:
-            User.objects.filter(id=id).update(gitee_name=gitee_name, level=1)
         return self.update(request, *args, **kwargs)
 
 
@@ -272,8 +260,10 @@ class MeetingsDataView(GenericAPIView, ListModelMixin):
                     'group_name': meeting.group_name,
                     'startTime': meeting.start,
                     'endTime': meeting.end,
-                    'duration': int(meeting.end.split(':')[0]) - int(meeting.start.split(':')[0]) if meeting.end.split(':')[1] == '00' else int(meeting.end.split(':')[0]) - int(meeting.start.split(':')[0]) + 1,
-                    'duration_time': meeting.start.split(':')[0] + ':00' + '-' + meeting.end.split(':')[0] + ':00' if meeting.end.split(':')[1] == '00' else meeting.start.split(':')[0] + ':00' + '-' + str(int(meeting.end.split(':')[0]) + 1) + ':00',
+                    'duration': math.ceil(float(meeting.end.replace(':', '.'))) - math.floor(
+                            float(meeting.start.replace(':', '.'))),
+                    'duration_time': meeting.start.split(':')[0] + ':00' + '-' + str(
+                            math.ceil(float(meeting.end.replace(':', '.')))) + ':00', 
                     'name': meeting.topic,
                     'creator': meeting.sponsor,
                     'detail': meeting.agenda,
@@ -288,7 +278,7 @@ class SigMeetingsDataView(GenericAPIView, ListModelMixin):
     serializer_class = MeetingsDataSerializer
     queryset = Meeting.objects.filter(is_delete=0).order_by('date', 'start')
 
-    def get(self, request, *args, **kwargs):
+    ef get(self, request, *args, **kwargs):
         group_id = kwargs.get('pk')
         queryset = self.filter_queryset(self.get_queryset()).values()
         tableData = []
@@ -306,8 +296,10 @@ class SigMeetingsDataView(GenericAPIView, ListModelMixin):
                         'date': meeting.date,
                         'startTime': meeting.start,
                         'endTime': meeting.end,
-                        'duration': int(meeting.end.split(':')[0]) - int(meeting.start.split(':')[0]) if meeting.end.split(':')[1] == '00' else int(meeting.end.split(':')[0]) - int(meeting.start.split(':')[0]) + 1,
-                        'duration_time': meeting.start.split(':')[0] + ':00' + '-' + meeting.end.split(':')[0] + ':00' if meeting.end.split(':')[1] == '00' else meeting.start.split(':')[0] + ':00' + '-' + str(int(meeting.end.split(':')[0]) + 1) + ':00',
+                        'duration': math.ceil(float(meeting.end.replace(':', '.'))) - math.floor(
+                                float(meeting.start.replace(':', '.'))),
+                        'duration_time': meeting.start.split(':')[0] + ':00' + '-' + str(
+                                math.ceil(float(meeting.end.replace(':', '.')))) + ':00', 
                         'name': meeting.topic,
                         'creator': meeting.sponsor,
                         'detail': meeting.agenda,
@@ -342,22 +334,30 @@ class MeetingsView(GenericAPIView, CreateModelMixin):
         start_search = str(int(start.split(':')[0]) - 1) + ':00'
         end_search = str(int(end.split(':')[0]) + 1) + ':00'
         # 查询待创建的会议与现有的预定会议是否冲突
+        unavailable_host_id = []
+        available_host_id = []
         meetings = Meeting.objects.filter(is_delete=0, date=date, start__gte=start_search, end__lte=end_search).values()
         try:
             for meeting in meetings:
-                print('meeting: {}'.format(meeting))
-                host_id = meeting.host_id
-                del host_dict[host_id]
-        except Exception:
-            logger.info('当天此时段无host占用')
-        if len(host_dict) == 0:
+                host_id = meeting['host_id']
+                unavailable_host_id.append(host_id)
+            logger.info('unavilable_host_id:{}'.format(unavailable_host_id))
+        except KeyError:
+            pass
+        host_list = list(host_dict.keys())
+        logger.info('host_list:{}'.format(host_list))
+        for host_id in host_list:
+            if host_id not in unavailable_host_id:
+                available_host_id.append(host_id)
+        logger.info('avilable_host_id:{}'.format(available_host_id))
+        if len(available_host_id) == 0:
             logger.warning('暂无可用host')
             return JsonResponse({'code': 1000, 'massage': '暂无可用host,请前往官网查看预定会议'})
-        # 从过滤后的host_dict中随机生成一个host
-        print('host_dict: {}'.format(host_dict))
-        host = random.choice(list(host_dict.values()))
-        t2 = time.time()
-        print('get host waste time: {}'.format(t2-t1))
+        # 从available_host_id中随机生成一个host_id,并在host_dict中取出
+        host_id = random.choice(available_host_id)
+        host = host_dict[host_id]
+        logger.info('host_id:{}'.format(host_id))
+        logger.info('host:{}'.format(host))
         # start_time拼接
         if int(start.split(':')[0]) >= 8:
             start_time = date + 'T' + str(int(start.split(':')[0]) - 8) + ':00:00Z'
@@ -404,6 +404,5 @@ class MeetingsView(GenericAPIView, CreateModelMixin):
         meeting = Meeting.objects.get(mid=response['id'])
         resp['id'] = meeting.id
         t3 = time.time()
-        print('total waste: {}'.format(t3-t1))
+        print('total waste: {}'.format(t3 - t1))
         return JsonResponse(resp)
-
