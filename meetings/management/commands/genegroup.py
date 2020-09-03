@@ -19,12 +19,13 @@ class Command(BaseCommand):
         while True:
             sig_name = html.xpath("//div[@id='tree-slider']/div[{}]/div[1]/a/@title".format(i))[0]
             sig_page = html.xpath("//div[@id='tree-slider']/div[{}]/div[1]/a/@href".format(i))[0]
+            etherpad = 'https://etherpad.openeuler.org/p/sig-{}-meetings'.format(sig_name)
             if sig_name == 'sigs.yaml':
                 break
-            # 获取所有sig的名称和页面地址
-            sigs_list.append([sig_name, 'https://gitee.com' + sig_page])
+            # 获取所有sig的名称、首页和etherpad
+            sigs_list.append([sig_name, 'https://gitee.com' + sig_page, etherpad])
             i += 2
-
+        sigs_list = sorted(sigs_list)
         for sig in sigs_list:
             if sig[0] == 'sig-template':
                 continue
@@ -36,11 +37,11 @@ class Command(BaseCommand):
                 maillist = html.xpath('//li[contains(text(), "邮件列表")]/a/@href')[0].replace('mailto:', '')
             except IndexError:
                 try:
-                    maillist = html.xpath('//a[contains(text(), "邮件列表")]/@href')[0].rstrip('/').split('/')[-1]
+                    maillist = html.xpath('//a[contains(text(), "邮件列表")]/@href')[0].rstrip('/').split('/')[-1].replace('mailto:', '')
                 except IndexError:
                     maillist = 'dev@openeuler.org'
             if not maillist:
-                    maillist = 'dev@openeuler.org'
+                maillist = 'dev@openeuler.org'
             sig.append(maillist)
 
             # 获取IRC频道
@@ -70,13 +71,20 @@ class Command(BaseCommand):
                 owners.append(maintainer)
             owners = ','.join(owners)
             sig.append(owners)
-
+            group_name = sig[0]
+            home_page = sig[1]
+            etherpad = sig[2]
+            maillist = sig[3]
+            irc = sig[4]
+            owners = sig[5]
             # 查询数据库，如果sig_name不存在，则创建sig信息；如果sig_name存在,则更新sig信息
-            if not Group.objects.filter(group_name=sig[0]):
-                Group.objects.create(group_name=sig[0], home_page=sig_page, owners=owners, maillist=maillist, irc=irc)
-                self.logger.info("Create sig: {}".format(sig[0]))
+            if not Group.objects.filter(group_name=group_name):
+                Group.objects.create(group_name=group_name, home_page=home_page, maillist=maillist,
+                                     irc=irc, etherpad=etherpad, owners=owners)
+                self.logger.info("Create sig: {}".format(group_name))
                 self.logger.info(sig)
             else:
-                Group.objects.update(home_page=sig_page, owners=owners, maillist=maillist, irc=irc)
-                self.logger.info("Update sig: {}".format(sig[0]))
+                Group.objects.filter(group_name=group_name).update(maillist=maillist, irc=irc, etherpad=etherpad, owners=owners)
+                self.logger.info("Update sig: {}".format(group_name))
                 self.logger.info(sig)
+
