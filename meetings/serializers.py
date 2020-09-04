@@ -34,7 +34,7 @@ class GroupUserAddSerializer(ModelSerializer):
         try:
             for id in users:
                 groupuser = GroupUser.objects.create(group_id=group_id.id, user_id=int(id.id))
-                User.objects.filter(id=int(id.id)).update(level=2)
+                User.objects.filter(id=int(id.id), level=1).update(level=2)
             return groupuser
         except Exception as e:
             logger.error('Failed to add maintainers to the group.')
