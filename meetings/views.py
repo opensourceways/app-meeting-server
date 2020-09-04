@@ -41,7 +41,7 @@ class LoginView(GenericAPIView, CreateModelMixin, ListModelMixin):
 class GroupsView(GenericAPIView, ListModelMixin):
     """查询所有SIG组的名称"""
     serializer_class = GroupsSerializer
-    queryset = Group.objects.all()
+    queryset = Group.objects.all().order_by('group_name')
     filter_backends = [SearchFilter]
     search_fields = ['group_name']
 
