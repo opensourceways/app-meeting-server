@@ -281,7 +281,9 @@ class SigMeetingsDataView(GenericAPIView, ListModelMixin):
 
     def get(self, request, *args, **kwargs):
         group_id = kwargs.get('pk')
-        queryset = self.filter_queryset(self.get_queryset()).values()
+        queryset = self.filter_queryset(self.get_queryset()).filter(group_id=group_id).filter((Q(
+        date__gte=str(datetime.datetime.now() - datetime.timedelta(days=180))[:10]) & Q(
+        date__lte=str(datetime.datetime.now() + datetime.timedelta(days=30))[:10]))).values() 
         tableData = []
         date_list = []
         for query in queryset:
