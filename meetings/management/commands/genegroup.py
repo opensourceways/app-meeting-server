@@ -19,7 +19,7 @@ class Command(BaseCommand):
         while True:
             sig_name = html.xpath("//div[@id='tree-slider']/div[{}]/div[1]/a/@title".format(i))[0]
             sig_page = html.xpath("//div[@id='tree-slider']/div[{}]/div[1]/a/@href".format(i))[0]
-            etherpad = 'https://etherpad.openeuler.org/p/sig-{}-meetings'.format(sig_name)
+            etherpad = 'https://etherpad.openeuler.org/p/{}-meetings'.format(sig_name)
             if sig_name == 'sigs.yaml':
                 break
             # 获取所有sig的名称、首页和etherpad
@@ -27,7 +27,7 @@ class Command(BaseCommand):
             i += 2
         sigs_list = sorted(sigs_list)
         for sig in sigs_list:
-            if sig[0] == 'sig-template':
+            if sig[0] == 'sig-template' or sig[0] == 'Others':
                 continue
             # 获取邮件列表
             r = requests.get(sig[1])
