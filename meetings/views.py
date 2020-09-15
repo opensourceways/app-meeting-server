@@ -236,7 +236,7 @@ class UserInfoView(GenericAPIView, RetrieveModelMixin):
         if user_id != request.user.id:
             logger.warning('user_id did not match.')
             logger.warning('user_id:{}, request.user.id:{}'.format(user_id, request.user.id))
-            return JsonResponse({"code": 400, "massage": "错误操作，信息不匹配！"})
+            return JsonResponse({"code": 400, "message": "错误操作，信息不匹配！"})
         return self.retrieve(request, *args, **kwargs)
 
 
@@ -338,7 +338,7 @@ class MeetingsView(GenericAPIView, CreateModelMixin):
             return JsonResponse({'code': 1005, 'message': '请输入正确的开始时间'})
         if start >= end:
             logger.warning('The end time must be greater than the start time.')
-            return JsonResponse({'code': 1001, 'massage': '请输入正确的结束时间'})
+            return JsonResponse({'code': 1001, 'message': '请输入正确的结束时间'})
         start_search = str(int(start.split(':')[0]) - 1) + ':00'
         end_search = str(int(end.split(':')[0]) + 1) + ':00'
         # 查询待创建的会议与现有的预定会议是否冲突
@@ -360,7 +360,7 @@ class MeetingsView(GenericAPIView, CreateModelMixin):
         logger.info('avilable_host_id:{}'.format(available_host_id))
         if len(available_host_id) == 0:
             logger.warning('暂无可用host')
-            return JsonResponse({'code': 1000, 'massage': '暂无可用host,请前往官网查看预定会议'})
+            return JsonResponse({'code': 1000, 'message': '暂无可用host,请前往官网查看预定会议'})
         # 从available_host_id中随机生成一个host_id,并在host_dict中取出
         host_id = random.choice(available_host_id)
         host = host_dict[host_id]
@@ -408,7 +408,7 @@ class MeetingsView(GenericAPIView, CreateModelMixin):
         )
         logger.info('{} has created a meeting which mid is {}.'.format(data['sponsor'], response['id']))
         # 返回请求数据
-        resp = {'code': 201, 'massage': '创建成功'}
+        resp = {'code': 201, 'message': '创建成功'}
         meeting = Meeting.objects.get(mid=response['id'])
         resp['id'] = meeting.id
         t3 = time.time()
