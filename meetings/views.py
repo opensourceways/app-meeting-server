@@ -331,6 +331,11 @@ class MeetingsView(GenericAPIView, CreateModelMixin):
         end = data['end']
         user_id = request.user.id
         group_id = data['group_id']
+        from datetime import datetime
+        start_time = ' '.join([date, start])
+        if start_time < datetime.now().strftime('%Y-%m-%d %H:%M:%S'):
+            logger.warning('The start time should not be earlier than the current time.')
+            return JsonResponse({'code': 1005, 'message': '请输入正确的开始时间'})
         if start >= end:
             logger.warning('The end time must be greater than the start time.')
             return JsonResponse({'code': 1001, 'massage': '请输入正确的结束时间'})
