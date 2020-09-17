@@ -1,5 +1,6 @@
 import requests
 import lxml
+import time
 import logging
 from lxml.etree import HTML
 from meetings.models import Group
@@ -10,6 +11,9 @@ class Command(BaseCommand):
     logger = logging.getLogger('log')
 
     def handle(self, *args, **options):
+        t1 = time.time()
+        self.logger.info('Starting to genegroup...')
+        print('Starting to genegroup...')
         url = 'https://gitee.com/openeuler/community/tree/master/sig'
         r = requests.get(url)
         html = HTML(r.content)
@@ -26,6 +30,49 @@ class Command(BaseCommand):
             sigs_list.append([sig_name, 'https://gitee.com' + sig_page, etherpad])
             i += 2
         sigs_list = sorted(sigs_list)
+        t2 = time.time()
+        self.logger.info('Has got sigs_list, wasted time: {}'.format(t2 - t1))
+        print('Has got sigs_list, wasted time: {}'.format(t2 - t1))
+
+        # 获取所有owner对应sig的字典owners_sigs
+        # 定义owners集合
+        owners = set()
+        owners_sigs = {}
+        for sig in sigs_list:
+            if sig[0] == 'sig-template' or sig[0] == 'Others':
+                continue
+            url = 'https://gitee.com/openeuler/community/blob/master/sig/{}/OWNERS'.format(sig[0])
+            r = requests.get(url)
+            html = HTML(r.text)
+            assert isinstance(html, lxml.etree._Element)
+            res = html.xpath('//div[@class="line"]/text()')
+            for i in res[1:]:
+                maintainer = i.strip().split('-')[-1].strip()
+                owners.add(maintainer)
+        # 去除owners中为''的元素
+        owners.remove('')
+        # 初始化owners_sigs
+        for owner in owners:
+            owners_sigs[owner] = []
+        # 遍历sigs_list,添加在该sig中的owner所对应的sig
+        for sig in sigs_list:
+            url = 'https://gitee.com/openeuler/community/blob/master/sig/{}/OWNERS'.format(sig[0])
+            r = requests.get(url)
+            html = HTML(r.text)
+            assert isinstance(html, lxml.etree._Element)
+            res = html.xpath('//div[@class="line"]/text()')
+            # 获取每个sig的maintainer的列表
+            maintainers = []
+            for i in res[1:]:
+                maintainer = i.strip().split('-')[-1].strip()
+                maintainers.append(maintainer)
+            for owner in owners:
+                if owner in maintainers:
+                    owners_sigs[owner].append(sig[0])
+        t3 = time.time()
+        self.logger.info('Has got owners_sigs, wasted time: {}'.format(t3 - t2))
+        print('Has got owners_sigs, wasted time: {}'.format(t3 - t2))
+
         for sig in sigs_list:
             if sig[0] == 'sig-template' or sig[0] == 'Others':
                 continue
@@ -68,9 +115,21 @@ class Command(BaseCommand):
             owners = []
             for i in res[1:]:
                 maintainer = i.strip().split('-')[-1].strip()
-                owners.append(maintainer)
-            owners = ','.join(owners)
+                r = requests.get('https://gitee.com/api/v5/users/{}'.format(maintainer))
+                owner = {}
+                if r.status_code == 200:
+                    owner['gitee_id'] = maintainer
+                    owner['avatar_url'] = r.json()['avatar_url']
+                    owner['home_page'] = 'https://gitee.com/{}'.format(maintainer)
+                    owner['sigs'] = owners_sigs[maintainer]
+                    if r.json()['email']:
+                        owner['email'] = r.json()['email']
+                if r.status_code == 404:
+                    pass
+                owners.append(owner)
             sig.append(owners)
+            sig[5] = str(sig[5]).replace("'", '"')
+            print(sig[5])
             group_name = sig[0]
             home_page = sig[1]
             etherpad = sig[2]
@@ -87,4 +146,8 @@ class Command(BaseCommand):
                 Group.objects.filter(group_name=group_name).update(maillist=maillist, irc=irc, etherpad=etherpad, owners=owners)
                 self.logger.info("Update sig: {}".format(group_name))
                 self.logger.info(sig)
-
+        t4 = time.time()
+        self.logger.info('Has updated database, wasted time: {}'.format(t4 - t3))
+        self.logger.info('All done. Wasted time: {}'.format(t4 - t1))
+        print('Has updated database, wasted time: {}'.format(t4 - t3))
+        print('All done. Wasted time: {}'.format(t4 - t1))
