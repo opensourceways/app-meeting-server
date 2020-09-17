@@ -196,11 +196,10 @@ class GroupUserSerializer(ModelSerializer):
 
 
 class SigsSerializer(ModelSerializer):
-    groupuser_set = GroupUserSerializer(many=True, read_only=True)
 
     class Meta:
         model = Group
-        fields = ['id', 'group_name', 'home_page', 'maillist', 'irc', 'groupuser_set']
+        fields = ['id', 'group_name', 'home_page', 'maillist', 'irc', 'owners']
 
 
 class MeetingsDataSerializer(ModelSerializer):
@@ -209,4 +208,3 @@ class MeetingsDataSerializer(ModelSerializer):
     class Meta:
         model = Meeting
         fields = ('id', 'date', 'start', 'end', 'duration', 'avatar')
-
