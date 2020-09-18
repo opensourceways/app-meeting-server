@@ -13,7 +13,6 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         t1 = time.time()
         self.logger.info('Starting to genegroup...')
-        print('Starting to genegroup...')
         url = 'https://gitee.com/openeuler/community/tree/master/sig'
         r = requests.get(url)
         html = HTML(r.content)
@@ -26,21 +25,21 @@ class Command(BaseCommand):
             etherpad = 'https://etherpad.openeuler.org/p/{}-meetings'.format(sig_name)
             if sig_name == 'sigs.yaml':
                 break
+            i += 2
+            if sig_name == 'sig-template':
+                continue
             # 获取所有sig的名称、首页和etherpad
             sigs_list.append([sig_name, 'https://gitee.com' + sig_page, etherpad])
-            i += 2
+
         sigs_list = sorted(sigs_list)
         t2 = time.time()
         self.logger.info('Has got sigs_list, wasted time: {}'.format(t2 - t1))
-        print('Has got sigs_list, wasted time: {}'.format(t2 - t1))
 
         # 获取所有owner对应sig的字典owners_sigs
         # 定义owners集合
         owners = set()
         owners_sigs = {}
         for sig in sigs_list:
-            if sig[0] == 'sig-template' or sig[0] == 'Others':
-                continue
             url = 'https://gitee.com/openeuler/community/blob/master/sig/{}/OWNERS'.format(sig[0])
             r = requests.get(url)
             html = HTML(r.text)
@@ -71,11 +70,8 @@ class Command(BaseCommand):
                     owners_sigs[owner].append(sig[0])
         t3 = time.time()
         self.logger.info('Has got owners_sigs, wasted time: {}'.format(t3 - t2))
-        print('Has got owners_sigs, wasted time: {}'.format(t3 - t2))
 
         for sig in sigs_list:
-            if sig[0] == 'sig-template' or sig[0] == 'Others':
-                continue
             # 获取邮件列表
             r = requests.get(sig[1])
             html = HTML(r.text)
@@ -129,7 +125,6 @@ class Command(BaseCommand):
                 owners.append(owner)
             sig.append(owners)
             sig[5] = str(sig[5]).replace("'", '"')
-            print(sig[5])
             group_name = sig[0]
             home_page = sig[1]
             etherpad = sig[2]
@@ -149,5 +144,3 @@ class Command(BaseCommand):
         t4 = time.time()
         self.logger.info('Has updated database, wasted time: {}'.format(t4 - t3))
         self.logger.info('All done. Wasted time: {}'.format(t4 - t1))
-        print('Has updated database, wasted time: {}'.format(t4 - t3))
-        print('All done. Wasted time: {}'.format(t4 - t1))
