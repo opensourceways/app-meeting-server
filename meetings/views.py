@@ -329,6 +329,7 @@ class MeetingsView(GenericAPIView, CreateModelMixin):
         date = data['date']
         start = data['start']
         end = data['end']
+        topic = data['topic']
         user_id = request.user.id
         group_id = data['group_id']
         from datetime import datetime
@@ -377,9 +378,17 @@ class MeetingsView(GenericAPIView, CreateModelMixin):
         duration = (int(end.split(':')[0]) - int(start.split(':')[0])) * 60 + (
                 int(end.split(':')[1]) - int(start.split(':')[1]))
         # 准备好调用zoom api的data
+        password = ""
+        for i in range(6):
+            ch = chr(random.randrange(ord('0'), ord('9') + 1))
+            password += ch
         new_data = {}
+        new_data['settings'] = {}
         new_data['start_time'] = start_time
         new_data['duration'] = duration
+        new_data['topic'] = topic
+        new_data['password'] = password
+        new_data['settings']['waiting_room'] = False
         headers = {
             "content-type": "application/json",
             "authorization": "Bearer {}".format(settings.ZOOM_TOKEN)
