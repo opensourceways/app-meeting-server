@@ -369,11 +369,11 @@ class MeetingsView(GenericAPIView, CreateModelMixin):
         logger.info('host:{}'.format(host))
         # start_time拼接
         if int(start.split(':')[0]) >= 8:
-            start_time = date + 'T' + str(int(start.split(':')[0]) - 8) + ':00:00Z'
+            start_time = date + 'T' + ':'.join([str(int(start.split(':')[0]) - 8), start.split(':')[1], '00Z'])
         else:
             d = datetime.datetime.strptime(date, '%Y-%m-%d') - datetime.timedelta(days=1)
             date = datetime.datetime.strftime(d, '%Y-%m-%d %H%M%S')[:10]
-            start_time = date + 'T' + str(int(start.split(':')[0]) + 16) + ':00:00Z'
+            start_time = date + 'T' + ':'.join([str(int(start.split(':')[0]) + 16), start.split(':')[1], '00Z'])
         # 计算duration
         duration = (int(end.split(':')[0]) - int(start.split(':')[0])) * 60 + (
                 int(end.split(':')[1]) - int(start.split(':')[1]))
