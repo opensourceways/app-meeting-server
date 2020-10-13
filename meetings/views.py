@@ -268,7 +268,10 @@ class MeetingsDataView(GenericAPIView, ListModelMixin):
                     'name': meeting.topic,
                     'creator': meeting.sponsor,
                     'detail': meeting.agenda,
-                    'url': User.objects.get(id=meeting.user_id).avatar
+                    'url': User.objects.get(id=meeting.user_id).avatar,
+                    'join_url': meeting.join_url,
+                    'meeting_id': meeting.mid,
+                    'etherpad': meeting.etherpad
                 } for meeting in Meeting.objects.filter(is_delete=0, date=date)]
             })
         return Response({'tableData': tableData})
@@ -306,7 +309,10 @@ class SigMeetingsDataView(GenericAPIView, ListModelMixin):
                         'name': meeting.topic,
                         'creator': meeting.sponsor,
                         'detail': meeting.agenda,
-                        'url': User.objects.get(id=meeting.user_id).avatar
+                        'url': User.objects.get(id=meeting.user_id).avatar,
+                        'join_url': meeting.join_url,
+                        'meeting_id': meeting.mid,
+                        'etherpad': meeting.etherpad
                     } for meeting in Meeting.objects.filter(is_delete=0, group_id=group_id, date=date)]
                 })
         return Response({'tableData': tableData})
