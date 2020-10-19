@@ -39,35 +39,37 @@ class Command(BaseCommand):
         # 定义owners集合
         owners = set()
         owners_sigs = {}
+        maintainer_dict = {}
         for sig in sigs_list:
-            url = 'https://gitee.com/openeuler/community/blob/master/sig/{}/OWNERS'.format(sig[0])
-            r = requests.get(url)
-            html = HTML(r.text)
-            assert isinstance(html, lxml.etree._Element)
-            res = html.xpath('//div[@class="line"]/text()')
-            for i in res[1:]:
-                maintainer = i.strip().split('-')[-1].strip()
-                owners.add(maintainer)
-        # 去除owners中为''的元素
+            maintainers = []
+            a = 0
+            while a < 3:
+                try:
+                    url = 'https://gitee.com/openeuler/community/blob/master/sig/{}/OWNERS'.format(sig[0])
+                    r = requests.get(url, timeout=5)
+                    html = HTML(r.text)
+                    assert isinstance(html, lxml.etree._Element)
+                    res = html.xpath('//div[@class="line"]/text()')
+                    for i in res[1:]:
+                        maintainer = i.strip().split('-')[-1].strip()
+                        maintainers.append(maintainer)
+                        owners.add(maintainer)
+                    maintainer_dict[sig[0]] = maintainers
+                    break
+                except Exception as e:
+                    self.logger.info(e)
+                    a += 1
+                # 去除owners中为''的元素
         owners.remove('')
         # 初始化owners_sigs
         for owner in owners:
             owners_sigs[owner] = []
         # 遍历sigs_list,添加在该sig中的owner所对应的sig
         for sig in sigs_list:
-            url = 'https://gitee.com/openeuler/community/blob/master/sig/{}/OWNERS'.format(sig[0])
-            r = requests.get(url)
-            html = HTML(r.text)
-            assert isinstance(html, lxml.etree._Element)
-            res = html.xpath('//div[@class="line"]/text()')
-            # 获取每个sig的maintainer的列表
-            maintainers = []
-            for i in res[1:]:
-                maintainer = i.strip().split('-')[-1].strip()
-                maintainers.append(maintainer)
             for owner in owners:
-                if owner in maintainers:
-                    owners_sigs[owner].append(sig[0])
+                if owner in maintainer_dict[sig[0]]:
+                    owners_sigs[owner].append(sig[0]) 
+
         t3 = time.time()
         self.logger.info('Has got owners_sigs, wasted time: {}'.format(t3 - t2))
 
