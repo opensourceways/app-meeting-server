@@ -275,3 +275,8 @@ LOGGING = {
         },
     }
 }
+
+GMAIL_USERNAME = os.getenv('GMAIL_USERNAME', '')
+GMAIL_PASSWORD = os.getenv('GMAIL_PASSWORD', '')
+SMTP_SERVER_HOST = 'smtp.gmail.com'
+SMTP_SERVER_PORT = 587

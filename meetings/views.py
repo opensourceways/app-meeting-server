@@ -20,6 +20,8 @@ from meetings.serializers import LoginSerializer, GroupsSerializer, MeetingSeria
     UserGroupSerializer, MeetingListSerializer, GroupUserDelSerializer, UserInfoSerializer, \
     SigsSerializer, MeetingsDataSerializer
 from rest_framework.response import Response
+from multiprocessing import Process
+from meetings.send_email import sendmail
 
 
 logger = logging.getLogger('log')
@@ -401,7 +403,20 @@ class MeetingsView(GenericAPIView, CreateModelMixin):
         }
         url = "https://api.zoom.us/v2/users/{}/meetings".format(host)
         # 发送post请求，创建会议
-        response = requests.post(url, data=json.dumps(new_data), headers=headers).json()
+        response = requests.post(url, data=json.dumps(new_data), headers=headers)
+        if response.status_code != 201:
+            logger.info('code: {}, fail to create.'.format(response.status_code))
+            return Jsonresponse({'code': response.status_code, 'msg': 'Fail to create.'})
+        response = response.json()
+
+        # 发送email
+        join_url = response['join_url']
+        sig_name = data['group_name']
+        toaddrs = emaillist
+        
+        p1 = Process(target=sendmail, args=(topic, date, start, join_url, sig_name, toaddrs))
+        p1.start() 
+
         # 数据库生成数据
         Meeting.objects.create(
             mid=response['id'],
