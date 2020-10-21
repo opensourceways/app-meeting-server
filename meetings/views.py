@@ -338,6 +338,7 @@ class MeetingsView(GenericAPIView, CreateModelMixin):
         start = data['start']
         end = data['end']
         topic = data['topic']
+        emaillist = data['emaillist'] if 'emaillist' in data else ''
         user_id = request.user.id
         group_id = data['group_id']
         from datetime import datetime
@@ -427,7 +428,7 @@ class MeetingsView(GenericAPIView, CreateModelMixin):
             start=start,
             end=end,
             etherpad=data['etherpad'],
-            emaillist=data['emaillist'] if 'emaillist' in data else '',
+            emaillist=emaillist,
             timezone=response['timezone'],
             agenda=data['agenda'] if 'agenda' in data else '',
             host_id=response['host_id'],
