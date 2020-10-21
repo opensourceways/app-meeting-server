@@ -13,6 +13,12 @@ def sendmail(topic, date, start, join_url, sig_name, toaddrs, enclosure_paths=No
     start_time = ' '.join([date, start])
     toaddrs = toaddrs.replace(' ', '').replace('，', ',').replace(';', ',').replace('；', ',')
     toaddrs_list = toaddrs.split(',')
+    error_addrs = []
+    for addr in toaddrs_list:
+        if not re.match(r'^[a-zA-Z0-9_-]+@[a-zA-Z0-9_-]+(\.[a-zA-Z0-9_-]+)+$', addr):
+            error_addrs.append(addr)
+            toaddrs_list.remove(addr)
+    toaddrs_string = ','.join(toaddrs_list)
     # 构造邮件
     msg = MIMEMultipart()
 
@@ -53,7 +59,7 @@ def sendmail(topic, date, start, join_url, sig_name, toaddrs, enclosure_paths=No
     # 完善邮件信息
     msg['Subject'] = topic
     msg['From'] = 'openEuler conference'
-    msg['To'] = toaddrs
+    msg['To'] = toaddrs_string
 
     # 登录服务器发送邮件
     try:
@@ -64,7 +70,9 @@ def sendmail(topic, date, start, join_url, sig_name, toaddrs, enclosure_paths=No
         server.starttls()
         server.login(gmail_username, gmail_password)
         server.sendmail(gmail_username, toaddrs_list, msg.as_string())
-        logger.info('email sent: {}'.format(toaddrs))
+        logger.info('email string: {}'.format(toaddrs))
+        logger.info('error addrs: {}'.format(error_addrs))
+        logger.info('email sent: {}'.format(toaddrs_string))
         server.quit()
     except smtplib.SMTPException as e:
         logger.error(e)
