@@ -57,7 +57,7 @@ def sendmail(topic, date, start, join_url, sig_name, toaddrs, enclosure_paths=No
 
     # 登录服务器发送邮件
     try:
-        gmail_username = setting.GMAIL_USERNAME
+        gmail_username = settings.GMAIL_USERNAME
         gmail_password = settings.GMAIL_PASSWORD
         server = smtplib.SMTP(settings.SMTP_SERVER_HOST, settings.SMTP_SERVER_PORT)
         server.ehlo()
