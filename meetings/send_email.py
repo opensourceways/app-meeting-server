@@ -1,5 +1,6 @@
 import logging
 import os
+import re
 import smtplib
 from django.conf import settings
 from email.mime.application import MIMEApplication
