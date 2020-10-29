@@ -2,15 +2,21 @@ import requests
 import lxml
 import time
 import logging
+import sys
 from lxml.etree import HTML
 from meetings.models import Group
 from django.core.management.base import BaseCommand
+from django.conf import settings
 
 
 class Command(BaseCommand):
     logger = logging.getLogger('log')
 
     def handle(self, *args, **options):
+        access_token = settings.CI_BOT_TOKEN
+        if not access_token:
+            logger.error('missing CI_BOT_TOKEN, exit...')
+            sys.exit(1)
         t1 = time.time()
         self.logger.info('Starting to genegroup...')
         url = 'https://gitee.com/openeuler/community/tree/master/sig'
@@ -113,7 +119,10 @@ class Command(BaseCommand):
             owners = []
             for i in res[1:]:
                 maintainer = i.strip().split('-')[-1].strip()
-                r = requests.get('https://gitee.com/api/v5/users/{}'.format(maintainer))
+                params = {
+                    'access_token': access_token        
+                }
+                r = requests.get('https://gitee.com/api/v5/users/{}'.format(maintainer), params=params)
                 owner = {}
                 if r.status_code == 200:
                     owner['gitee_id'] = maintainer
