@@ -1,7 +1,7 @@
 from django.urls import path
 from meetings.views import LoginView, GroupView, GroupsView, MeetingView, MeetingsView, UsersExcludeView, UserView, \
     GroupUserAddView, MeetingDelView, MeetingsWeeklyView, MeetingsDailyView, \
-    UsersIncludeView, UserGroupView, GroupUserDelView, UserInfoView, SigsView, MeetingsDataView, SigMeetingsDataView
+    UsersIncludeView, UserGroupView, GroupUserDelView, UserInfoView, SigsView, MeetingsDataView, SigMeetingsDataView 
 
 urlpatterns = [
     path('login/', LoginView.as_view()),  # 登陆
@@ -21,6 +21,5 @@ urlpatterns = [
     path('groupuser/action/del/', GroupUserDelView.as_view()),  # 批量删除SIG组成员
     path('userinfo/<int:pk>/', UserInfoView.as_view()),  # 查询本机用户的level和gitee_name
     path('meetingsdata/', MeetingsDataView.as_view()),  # 网页会议数据
-    path('sigmeetingsdata/<int:pk>/', SigMeetingsDataView.as_view()),  # 网页SIG会议数据
-
+    path('sigmeetingsdata/<int:pk>/', SigMeetingsDataView.as_view())  # 网页SIG会议数据
 ]
