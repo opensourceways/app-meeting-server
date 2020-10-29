@@ -15,7 +15,7 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         access_token = settings.CI_BOT_TOKEN
         if not access_token:
-            logger.error('missing CI_BOT_TOKEN, exit...')
+            self.logger.error('missing CI_BOT_TOKEN, exit...')
             sys.exit(1)
         t1 = time.time()
         self.logger.info('Starting to genegroup...')
