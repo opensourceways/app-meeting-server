@@ -407,7 +407,7 @@ class MeetingsView(GenericAPIView, CreateModelMixin):
         response = requests.post(url, data=json.dumps(new_data), headers=headers)
         if response.status_code != 201:
             logger.info('code: {}, fail to create.'.format(response.status_code))
-            return Jsonresponse({'code': response.status_code, 'msg': 'Fail to create.'})
+            return JsonResponse({'code': response.status_code, 'msg': 'Fail to create.'})
         response = response.json()
 
         # 发送email
