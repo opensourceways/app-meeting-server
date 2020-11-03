@@ -65,3 +65,13 @@ class Meeting(models.Model):
     is_delete = models.SmallIntegerField(verbose_name='是否删除', choices=((0, '否'), (1, '是')), default=0)
     user = models.ForeignKey(User, on_delete=models.DO_NOTHING)
     group = models.ForeignKey(Group, on_delete=models.DO_NOTHING)
+
+
+class Collect(models.Model):
+    """用户收藏会议表"""
+    meeting = models.ForeignKey(Meeting, on_delete=models.CASCADE)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+
+    class Meta:
+        unique_together = ('meeting', 'user')
+
