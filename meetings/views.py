@@ -22,8 +22,11 @@ from meetings.serializers import LoginSerializer, GroupsSerializer, MeetingSeria
 from rest_framework.response import Response
 from multiprocessing import Process
 from meetings.send_email import sendmail
+from rest_framework import permissions
+from scheduler import get_template, get_token, run_task
 
 
+run_task()
 logger = logging.getLogger('log')
 
 
@@ -220,11 +223,38 @@ class MeetingDelView(GenericAPIView, DestroyModelMixin):
             headers = {
                 "authorization": "Bearer {}".format(settings.ZOOM_TOKEN)}
             requests.request("DELETE", url, headers=headers)
-        except Exception:
+        except:
             pass
+        # 会议作软删除
+        meeting = Meeting.objects.get(mid=mid)
         Meeting.objects.filter(mid=mid).update(is_delete=1)
         logger.info('{} has canceled the meeting which mid was {}'.format(request.user.gitee_name, mid))
-        return JsonResponse({"code": 204, "massege": "Delete successfully."})
+        # 发送会议取消通知
+        meeting_id = meeting.id
+        collections = Collect.objects.filter(meeting_id=meeting_id)
+        if collections:
+            access_token = get_token()
+            topic = meeting.topic
+            date = meeting.date
+            start_time = meeting.start
+            time = date + ' ' + start_time
+            template_id = 'k1SE-Cy2nwCkRRD7BBYKFQInwDXNs1sZuMcqECJgBgg' 
+            page = '/pages/index/index'
+            text = '会议已被取消'
+            for collection in collections:
+                user_id = collection.user_id
+                openid = User.objects.get(id=user_id).openid
+                content = get_template(openid, template_id, meeting_id, page, topic, time, text)
+                r = requests.post('https://api.weixin.qq.com/cgi-bin/message/subscribe/send?access_token={}'.format(access_token),
+                                  data=json.dumps(content))
+                if r.status_code != 200:
+                    logger.error(r.status_code, r.json())
+                else:
+                    if r.json()['errCode'] != 0:
+                        logger.warning(r.json()['errCode'], r.json()['errMsg'])
+                # 删除收藏
+                collection.delete()
+        return JsonResponse({"code": 204, "message": "Delete successfully."})
 
 
 class UserInfoView(GenericAPIView, RetrieveModelMixin):
@@ -445,3 +475,84 @@ class MeetingsView(GenericAPIView, CreateModelMixin):
         t3 = time.time()
         print('total waste: {}'.format(t3 - t1))
         return JsonResponse(resp)
+
+
+class MyMeetingsView(GenericAPIView, ListModelMixin):
+    """查询我创建的所有会议"""
+    serializer_class = MeetingListSerializer
+    queryset = Meeting.objects.all().filter(is_delete=0)
+
+    @swagger_auto_schema(operation_summary='查询我创建的所有会议')
+    def get(self, request, *args, **kwargs):
+        user_id = kwargs.get('pk')
+        self.queryset = self.queryset.filter(user_id=user_id).order_by('-date', 'start')
+        return self.list(request, *args, **kwargs)
+
+
+class AllMeetingsView(GenericAPIView, ListModelMixin):
+    """列出所有会议"""
+    serializer_class = AllMeetingsSerializer
+    queryset = Meeting.objects.all()
+    filter_backends = [SearchFilter]
+    search_fields = ['is_delete', 'group_name', 'sponsor', 'date', 'start', 'end']
+    def get(self, request, *args, **kwargs):
+        return self.list(request, *args, **kwargs)
+
+
+class CollectView(GenericAPIView, ListModelMixin, CreateModelMixin):  
+    """收藏会议"""
+    serializer_class = CollectSerializer
+    queryset = Collect.objects.all()
+    permission_classes = (permissions.IsAuthenticated,)
+    authentication_classes = (authentication.JWTAuthentication,)
+
+    def post(self, request, *args, **kwargs):
+        user_id = self.request.user.id
+        meeting_id = self.request.data['meeting']
+        meeting = Meeting.objects.filter(id=meeting_id)
+        topic = meeting.values('topic')
+        date = meeting.values('date')
+        start_time = meeting.values('start')
+        start_url = meeting.values('start_url')
+        sig_name = meeting.values('group_name')
+        toaddrs = meeting.values('emaillist')
+        
+        collect = Collect.objects.create(meeting_id=meeting_id, user_id=user_id)
+        resp = {'code': 201, 'msg': 'collect successfully'}
+        return JsonResponse(resp)
+
+    def get_queryset(self):
+        queryset = Collect.objects.filter(user_id=self.request.user.id)
+        return queryset
+
+
+class CollectDelView(GenericAPIView, DestroyModelMixin):
+    """取消收藏"""
+    serializer_class = CollectSerializer
+    queryset = Collect.objects.all()
+    permission_classes = (permissions.IsAuthenticated,)
+    authentication_classes = (authentication.JWTAuthentication,)
+
+    def delete(self, request, *args, **kwargs):
+        return self.destroy(request, *args, **kwargs)
+
+    def get_queryset(self):
+        queryset = Collect.objects.filter(user_id=self.request.user.id)
+        return queryset
+
+
+class MyCollectionsView(GenericAPIView, ListModelMixin):
+    """我收藏的会议(列表)"""
+    serializer_class = MeetingListSerializer
+    queryset = Meeting.objects.all()
+    permission_classes = (permissions.IsAuthenticated,)
+    authentication_classes = (authentication.JWTAuthentication,)
+
+    def get(self, request, *args, **kwargs):
+        return self.list(request, *args, **kwargs)
+
+    def get_queryset(self):
+        user_id = self.request.user.id
+        collection_lst = Collect.objects.filter(user_id=user_id).values_list('meeting', flat=True)
+        queryset = Meeting.objects.filter(is_delete=0, user_id=user_id, id__in=collection_lst).order_by('-date', 'start')
+        return queryset
