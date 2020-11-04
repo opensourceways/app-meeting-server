@@ -250,8 +250,8 @@ class MeetingDelView(GenericAPIView, DestroyModelMixin):
                 if r.status_code != 200:
                     logger.error(r.status_code, r.json())
                 else:
-                    if r.json()['errCode'] != 0:
-                        logger.warning(r.json()['errCode'], r.json()['errMsg'])
+                    if r.json()['errcode'] != 0:
+                        logger.warning(r.json()['errcode'], r.json()['errmsg'])
                 # 删除收藏
                 collection.delete()
         return JsonResponse({"code": 204, "message": "Delete successfully."})
