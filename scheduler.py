@@ -97,8 +97,8 @@ def send_subscribe_msg():
                 if r.status_code != 200:
                     logger.error(r.status_code, r.json())
                 else:
-                    if r.json()['errCode'] != 0:
-                        logger.warning(r.json()['errCode'], r.json()['errMsg'])
+                    if r.json()['errcode'] != 0:
+                        logger.warning(r.json()['errcode'], r.json()['errmsg'])
             logger.info('meeting {} subscription message sent.'.format(mid))
     else:
         logger.info('no meeting found, skip meeting notify.')
