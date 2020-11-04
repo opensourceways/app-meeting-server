@@ -13,12 +13,12 @@ from rest_framework.generics import GenericAPIView
 from rest_framework.mixins import ListModelMixin, CreateModelMixin, RetrieveModelMixin, DestroyModelMixin, \
     UpdateModelMixin
 from rest_framework_simplejwt import authentication
-from meetings.models import User, Group, Meeting, GroupUser
+from meetings.models import User, Group, Meeting, GroupUser, Collect
 from meetings.permissions import MaintainerPermission, AdminPermission
 from meetings.serializers import LoginSerializer, GroupsSerializer, MeetingSerializer, UsersSerializer, \
     UserSerializer, GroupUserAddSerializer, GroupSerializer, UsersInGroupSerializer, \
     UserGroupSerializer, MeetingListSerializer, GroupUserDelSerializer, UserInfoSerializer, \
-    SigsSerializer, MeetingsDataSerializer
+    SigsSerializer, MeetingsDataSerializer, AllMeetingsSerializer, CollectSerializer
 from rest_framework.response import Response
 from multiprocessing import Process
 from meetings.send_email import sendmail

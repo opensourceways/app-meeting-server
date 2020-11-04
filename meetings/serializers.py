@@ -210,37 +210,13 @@ class MeetingsDataSerializer(ModelSerializer):
         fields = ('id', 'date', 'start', 'end', 'duration', 'avatar')
 
 
-class UserCollectionsSerializer(ModelSerializer):
-    class Meta:
-        model = Meeting
-        fields = ('id', 'mid')
-
-
 class CollectSerializer(ModelSerializer):
     class Meta:
         model = Collect
         fields = ['meeting']
 
 
-class CollectionsSerializer(ModelSerializer):
-    collection = serializers.SerializerMethodField()
-
-    class Meta:
-        model = Collect
-        fields = ['collection']
-
-    def get_collection(self, obj):
-        return Meeting.objects.filter(id=obj.meeting_id).values()
-
-
-class CollectionsSerializer(ModelSerializer):
-    class Meta:
-        model = Collect
-        fields = '__all__'
-
-
 class AllMeetingsSerializer(ModelSerializer):
     class Meta:
         model = Meeting
         fields = '__all__'
-
