@@ -22,7 +22,7 @@ urlpatterns = [
     path('groupuser/action/del/', GroupUserDelView.as_view()),  # 批量删除SIG组成员
     path('userinfo/<int:pk>/', UserInfoView.as_view()),  # 查询本机用户的level和gitee_name
     path('meetingsdata/', MeetingsDataView.as_view()),  # 网页会议数据
-    path('sigmeetingsdata/<int:pk>/', SigMeetingsDataView.as_view())  # 网页SIG会议数据
+    path('sigmeetingsdata/<int:pk>/', SigMeetingsDataView.as_view()),  # 网页SIG会议数据
     path('mymeetings/<int:pk>/', MyMeetingsView.as_view()),  # 查询我创建的会议
     path('allmeetings/', AllMeetingsView.as_view()),  # 查询所有会议
     path('collect/', CollectView.as_view()),  # 添加收藏
