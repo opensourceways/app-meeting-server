@@ -5,7 +5,7 @@ from django.contrib.auth.hashers import make_password
 from rest_framework import serializers
 from rest_framework.serializers import ModelSerializer
 from rest_framework_simplejwt.tokens import RefreshToken
-from meetings.models import Group, User, Meeting, GroupUser
+from meetings.models import Collect, Group, User, Meeting, GroupUser
 
 
 logger = logging.getLogger('log')
