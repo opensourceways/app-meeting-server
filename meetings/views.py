@@ -248,10 +248,12 @@ class MeetingDelView(GenericAPIView, DestroyModelMixin):
                 r = requests.post('https://api.weixin.qq.com/cgi-bin/message/subscribe/send?access_token={}'.format(access_token),
                                   data=json.dumps(content))
                 if r.status_code != 200:
-                    logger.error(r.status_code, r.json())
+                    logger.error('status code: {}'.format(r.status_code))
+                    logger.error('content: {}'.format(r.json()))
                 else:
                     if r.json()['errcode'] != 0:
-                        logger.warning(r.json()['errcode'], r.json()['errmsg'])
+                        logger.warning('Error Code: {}'.format(r.json()['errcode']))
+                        logger.warning('Error Msg: {}'.format(r.json()['errmsg']))
                 # 删除收藏
                 collection.delete()
         return JsonResponse({"code": 204, "message": "Delete successfully."})

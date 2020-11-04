@@ -95,10 +95,12 @@ def send_subscribe_msg():
                     access_token)
                 r = requests.post(url, json.dumps(content))
                 if r.status_code != 200:
-                    logger.error(r.status_code, r.json())
+                    logger.error('status code: {}'.format(r.status_code))
+                    logger.error('content: {}'.format(r.json()))
                 else:
                     if r.json()['errcode'] != 0:
-                        logger.warning(r.json()['errcode'], r.json()['errmsg'])
+                        logger.warning('Error Code: {}'.format(r.json()['errcode']))
+                        logger.warning('Error Msg: {}'.format(r.json()['errmsg']))
             logger.info('meeting {} subscription message sent.'.format(mid))
     else:
         logger.info('no meeting found, skip meeting notify.')
