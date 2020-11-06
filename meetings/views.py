@@ -23,10 +23,7 @@ from rest_framework.response import Response
 from multiprocessing import Process
 from meetings.send_email import sendmail
 from rest_framework import permissions
-from scheduler import get_template, get_token, run_task
 
-
-run_task()
 logger = logging.getLogger('log')
 
 
