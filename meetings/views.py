@@ -589,5 +589,5 @@ class MyCollectionsView(GenericAPIView, ListModelMixin):
     def get_queryset(self):
         user_id = self.request.user.id
         collection_lst = Collect.objects.filter(user_id=user_id).values_list('meeting', flat=True)
-        queryset = Meeting.objects.filter(is_delete=0, user_id=user_id, id__in=collection_lst).order_by('-date', 'start')
+        queryset = Meeting.objects.filter(is_delete=0, id__in=collection_lst).order_by('-date', 'start')
         return queryset
