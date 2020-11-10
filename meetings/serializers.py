@@ -94,10 +94,20 @@ class MeetingSerializer(ModelSerializer):
 
 
 class MeetingListSerializer(ModelSerializer):
+    collection_id = serializers.SerializerMethodField()
     class Meta:
         model = Meeting
-        fields = ['id', 'user_id', 'topic', 'sponsor', 'group_name', 'date', 'start', 'end', 'agenda', 'etherpad', 'mid',
-                  'join_url']
+        fields = ['id', 'collection_id', 'user_id', 'group_id', 'topic', 'sponsor', 'group_name', 'date', 'start', 'end', 'agenda', 'etherpad', 'mid', 'join_url']
+
+    def get_collection_id(self, obj):
+        user = None
+        request = self.context.get("request")
+        if request and hasattr(request, "user"):
+            user = request.user
+        try:
+            return Collect.objects.filter(user_id=user.pk, meeting_id=obj.id).values()[0]['id']
+        except IndexError:
+            return
 
 
 class LoginSerializer(serializers.ModelSerializer):
