@@ -39,23 +39,21 @@ class Command(BaseCommand):
             logger.error('fail to get access_token,exit.')
             sys.exit(1)
 
-    def get_template(self, openid, template_id, meeting_id, page, topic, time, text):
-        page = page + '?id={}'.format(meeting_id)
+    def get_start_template(self, openid, meeting_id, topic, time):
         content = {
             "touser": openid,
-            "template_id": template_id,
+            "template_id": "2xSske0tAcOVKNG9EpBjlb1I-cjPWSZrpwPDTgqAmWI",
             "page": "/pages/meeting/detail?id={}".format(meeting_id),
-            "miniprogram_state": "developer",
             "lang": "zh-CN",
             "data": {
-                "thing1": {
+                "thing7": {
                     "value": topic
                 },
-                "thing2": {
+                "date2": {
                     "value": time
                 },
-                "thing3": {
-                    "value": text
+                "thing6": {
+                    "value": "会议即将开始"
                 }
             }
         }
@@ -73,10 +71,6 @@ class Command(BaseCommand):
         if meetings:
             # 获取access_token
             access_token = self.get_token()
-            # 模板参数
-            template_id = 'k1SE-Cy2nwCkRRD7BBYKFQInwDXNs1sZuMcqECJgBgg'
-            page = '/pages/meeting/detail'
-            text = '会议即将开始'
             for meeting in meetings:
                 topic = meeting.topic
                 start_time = meeting.start
@@ -100,7 +94,7 @@ class Command(BaseCommand):
                     logger.info('the meeting {} had not been added to Favorites'.format(mid))
                 for openid in send_to_list:
                     # 获取模板
-                    content = self.get_template(openid, template_id, meeting_id, page, topic, time, text)
+                    content = self.get_start_template(openid, meeting_id, topic, time)
                     # 发送订阅消息
                     url = 'https://api.weixin.qq.com/cgi-bin/message/subscribe/send?access_token={}'.format(
                         access_token)

@@ -225,35 +225,70 @@ class MeetingDelView(GenericAPIView, DestroyModelMixin):
         # 会议作软删除
         meeting = Meeting.objects.get(mid=mid)
         Meeting.objects.filter(mid=mid).update(is_delete=1)
+        meeting_id = meeting.id
+        mid = meeting.mid
         logger.info('{} has canceled the meeting which mid was {}'.format(request.user.gitee_name, mid))
         # 发送会议取消通知
-        meeting_id = meeting.id
         collections = Collect.objects.filter(meeting_id=meeting_id)
         if collections:
-            access_token = get_token()
+            access_token = self.get_token()
             topic = meeting.topic
             date = meeting.date
             start_time = meeting.start
             time = date + ' ' + start_time
-            template_id = 'k1SE-Cy2nwCkRRD7BBYKFQInwDXNs1sZuMcqECJgBgg' 
-            page = '/pages/index/index'
-            text = '会议已被取消'
             for collection in collections:
                 user_id = collection.user_id
                 openid = User.objects.get(id=user_id).openid
-                content = get_template(openid, template_id, meeting_id, page, topic, time, text)
+                content = self.get_remove_template(openid, topic, time, mid)
                 r = requests.post('https://api.weixin.qq.com/cgi-bin/message/subscribe/send?access_token={}'.format(access_token),
                                   data=json.dumps(content))
                 if r.status_code != 200:
-                    logger.error('status code: {}'.format(r.status_code))
-                    logger.error('content: {}'.format(r.json()))
+                    logger.error(r.status_code, r.json())
                 else:
                     if r.json()['errcode'] != 0:
-                        logger.warning('Error Code: {}'.format(r.json()['errcode']))
-                        logger.warning('Error Msg: {}'.format(r.json()['errmsg']))
+                        logger.warning(r.json())
+                        logger.warning('receiver: {}'.format(User.objects.get(id=user_id).nickname))
                 # 删除收藏
                 collection.delete()
         return JsonResponse({"code": 204, "message": "Delete successfully."})
+
+    def get_remove_template(self, openid, topic, time, mid):
+        content = {
+            "touser": openid,
+            "template_id": "UpxRbZf8Z9QiEPlZeRCgp_MKvvqHlo6tcToY8fToK50",
+            "page": "/pages/index/index",
+            "miniprogram_state": "developer",
+            "lang": "zh-CN",
+            "data": {
+                "thing1": {
+                    "value": topic
+                },
+                "time2": {
+                    "value": time
+                },
+                "thing4": {
+                    "value": "会议{}已被取消".format(mid)
+                }
+            }
+        }
+        return content
+
+    def get_token(self):
+        appid = settings.APP_CONF['appid']
+        secret = settings.APP_CONF['secret']
+        url = 'https://api.weixin.qq.com/cgi-bin/token?appid={}&secret={}&grant_type=client_credential'.format(appid,
+                                                                                                               secret)
+        r = requests.get(url)
+        if r.status_code == 200:
+            try:
+                access_token = r.json()['access_token']
+                return access_token
+            except KeyError as e:
+                logger.error(e)
+        else:
+            logger.error(r.status_code, r.json())
+            logger.error('fail to get access_token,exit.')
+            sys.exit(1)
 
 
 class UserInfoView(GenericAPIView, RetrieveModelMixin):
@@ -368,6 +403,7 @@ class MeetingsView(GenericAPIView, CreateModelMixin):
         end = data['end']
         topic = data['topic']
         emaillist = data['emaillist'] if 'emaillist' in data else ''
+        summary = data['agenda'] if 'agenda' in data else ''
         user_id = request.user.id
         group_id = data['group_id']
         from datetime import datetime
@@ -444,7 +480,7 @@ class MeetingsView(GenericAPIView, CreateModelMixin):
         sig_name = data['group_name']
         toaddrs = emaillist
         
-        p1 = Process(target=sendmail, args=(topic, date, start, join_url, sig_name, toaddrs))
+        p1 = Process(target=sendmail, args=(topic, date, start, join_url, sig_name, toaddrs, summary))
         p1.start() 
 
         # 数据库生成数据

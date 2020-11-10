@@ -10,7 +10,7 @@ from email.mime.text import MIMEText
 
 logger = logging.getLogger('log')
 
-def sendmail(topic, date, start, join_url, sig_name, toaddrs, enclosure_paths=None):
+def sendmail(topic, date, start, join_url, sig_name, toaddrs, summary=None, enclosure_paths=None):
     start_time = ' '.join([date, start])
     toaddrs = toaddrs.replace(' ', '').replace('，', ',').replace(';', ',').replace('；', ',')
     toaddrs_list = toaddrs.split(',')
@@ -20,6 +20,11 @@ def sendmail(topic, date, start, join_url, sig_name, toaddrs, enclosure_paths=No
             error_addrs.append(addr)
             toaddrs_list.remove(addr)
     toaddrs_string = ','.join(toaddrs_list)
+    # 发送列表默认添加community和dev的邮件列表
+    toaddrs_list.extend(['community@openeuler.org', 'dev@openeuler.org'])
+    # 发送列表去重，排序
+    toaddrs_list = sorted(list(set(toaddrs_list)))
+
     # 构造邮件
     msg = MIMEMultipart()
 
@@ -46,6 +51,32 @@ def sendmail(topic, date, start, join_url, sig_name, toaddrs, enclosure_paths=No
     </body>
     </html>
     '''.format(sig_name, start_time, join_url, topic)
+    if summary:
+        body_of_email = '''
+        <html>
+        <body>
+        <div class='zh'>
+        <p>您好！</p>
+        <p>openEuler {0} SIG 邀请您参加 {1} 召开的ZOOM会议</p>
+        <p>会议主题：{3}</p>
+        <pre style="font-family: 'Microsoft YaHei',serif">会议内容：{4}</pre>
+        <p>会议链接：<a href="{2}">{2}</a></p>
+        <p>更多资讯尽在：<a href="https://openeuler.org/zh/">https://openeuler.org/zh/</a></p>
+        <br/>
+        <br/>
+        </div>
+        <div class='en'>
+        <p>Hello!</p>
+        <p>openEuler {0} SIG invites you to attend the ZOOM conference will be held at {1},</p>
+        <p>The subject of the conference is {3},</p>
+        <pre style="font-family: 'Microsoft YaHei UI',serif">Summary: {4}</pre>
+        <p>You can join the meeting at <a href="{2}">{2}</a>.</p>
+        <p><a href="https://openeuler.org/zh/">More information</a></p>
+        </div>
+        </body>
+        </html>
+        '''.format(sig_name, start_time, join_url, topic, summary)
+
     content = MIMEText(body_of_email, 'html', 'utf-8')
     msg.attach(content)
 
