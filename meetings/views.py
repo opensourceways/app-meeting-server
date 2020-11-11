@@ -238,16 +238,22 @@ class MeetingDelView(GenericAPIView, DestroyModelMixin):
             time = date + ' ' + start_time
             for collection in collections:
                 user_id = collection.user_id
-                openid = User.objects.get(id=user_id).openid
+                user = User.objects.get(id=user_id)
+                nickname = user.nickname
+                openid = user.openid
                 content = self.get_remove_template(openid, topic, time, mid)
                 r = requests.post('https://api.weixin.qq.com/cgi-bin/message/subscribe/send?access_token={}'.format(access_token),
                                   data=json.dumps(content))
                 if r.status_code != 200:
-                    logger.error(r.status_code, r.json())
+                    logger.error('status code: {}'.format(r.status_code))
+                    logger.error('content: {}'.format(r.json()))
                 else:
                     if r.json()['errcode'] != 0:
-                        logger.warning(r.json())
-                        logger.warning('receiver: {}'.format(User.objects.get(id=user_id).nickname))
+                        logger.warning('Error Code: {}'.format(r.json()['errcode']))
+                        logger.warning('Error Msg: {}'.format(r.json()['errmsg']))
+                        logger.warning('receiver: {}'.format(nickname))
+                    else:
+                        logger.info('meeting {} cancel message sent to {}.'.format(mid, nickname))
                 # 删除收藏
                 collection.delete()
         return JsonResponse({"code": 204, "message": "Delete successfully."})

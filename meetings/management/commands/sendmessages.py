@@ -103,9 +103,11 @@ class Command(BaseCommand):
                         logger.error('status code: {}'.format(r.status_code))
                         logger.error('content: {}'.format(r.json()))
                     else:
+                        nickname = User.objects.get(openid=openid).values('nickname')
                         if r.json()['errcode'] != 0:
                             logger.warning('Error Code: {}'.format(r.json()['errcode']))
                             logger.warning('Error Msg: {}'.format(r.json()['errmsg']))
+                            logger.warning('receiver: {}'.format(nickname))
                         else:
                             logger.info('meeting {} subscription message sent to {}.'.format(mid, openid))
         else:
