@@ -109,6 +109,6 @@ class Command(BaseCommand):
                             logger.warning('Error Msg: {}'.format(r.json()['errmsg']))
                             logger.warning('receiver: {}'.format(nickname))
                         else:
-                            logger.info('meeting {} subscription message sent to {}.'.format(mid, openid))
+                            logger.info('meeting {} subscription message sent to {}.'.format(mid, nickname))
         else:
             logger.info('no meeting found, skip meeting notify.')
