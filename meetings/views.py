@@ -259,6 +259,8 @@ class MeetingDelView(GenericAPIView, DestroyModelMixin):
         return JsonResponse({"code": 204, "message": "Delete successfully."})
 
     def get_remove_template(self, openid, topic, time, mid):
+        if len(topic) > 20:
+            topic = topic[:20]
         content = {
             "touser": openid,
             "template_id": "UpxRbZf8Z9QiEPlZeRCgp_MKvvqHlo6tcToY8fToK50",

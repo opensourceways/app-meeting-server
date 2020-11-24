@@ -40,6 +40,8 @@ class Command(BaseCommand):
             sys.exit(1)
 
     def get_start_template(self, openid, meeting_id, topic, time):
+        if len(topic) > 20:
+            topic = topic[:20]
         content = {
             "touser": openid,
             "template_id": "2xSske0tAcOVKNG9EpBjlb1I-cjPWSZrpwPDTgqAmWI",
