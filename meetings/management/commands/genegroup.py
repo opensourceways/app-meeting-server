@@ -85,12 +85,12 @@ class Command(BaseCommand):
             html = HTML(r.text)
             assert isinstance(html, lxml.etree._Element)
             try:
-                maillist = html.xpath('//li[contains(text(), "邮件列表")]/a/@href')[0].replace('mailto:', '')
+                maillist = html.xpath('//li[contains(text(), "邮件列表")]/a/@href')[0].rstrip('/').split('/')[-1].replace('mailto:', '')
             except IndexError:
                 try:
                     maillist = html.xpath('//a[contains(text(), "邮件列表")]/@href')[0].rstrip('/').split('/')[-1].replace('mailto:', '')
                     if '@' not in maillist:
-                        maillist = maillist.replace('.', '@', 1)
+                        maillist = html.xpath('//a[contains(@href, "@openeuler.org")]/text()')[0]
                 except IndexError:
                     maillist = 'dev@openeuler.org'
             if not maillist:
