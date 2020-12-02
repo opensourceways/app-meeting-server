@@ -89,6 +89,8 @@ class Command(BaseCommand):
             except IndexError:
                 try:
                     maillist = html.xpath('//a[contains(text(), "邮件列表")]/@href')[0].rstrip('/').split('/')[-1].replace('mailto:', '')
+                    if '@' not in maillist:
+                        maillist = maillist.replace('.', '@', 1)
                 except IndexError:
                     maillist = 'dev@openeuler.org'
             if not maillist:
