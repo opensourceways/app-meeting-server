@@ -414,6 +414,7 @@ class MeetingsView(GenericAPIView, CreateModelMixin):
         summary = data['agenda'] if 'agenda' in data else ''
         user_id = request.user.id
         group_id = data['group_id']
+        record = data['record']
         from datetime import datetime
         start_time = ' '.join([date, start])
         if start_time < datetime.now().strftime('%Y-%m-%d %H:%M:%S'):
@@ -471,6 +472,7 @@ class MeetingsView(GenericAPIView, CreateModelMixin):
         new_data['topic'] = topic
         new_data['password'] = password
         new_data['settings']['waiting_room'] = False
+        new_data['settings']['auto_recording'] = record
         headers = {
             "content-type": "application/json",
             "authorization": "Bearer {}".format(settings.ZOOM_TOKEN)
@@ -511,6 +513,17 @@ class MeetingsView(GenericAPIView, CreateModelMixin):
             group_id=group_id
         )
         logger.info('{} has created a meeting which mid is {}.'.format(data['sponsor'], response['id']))
+
+        # 如果开启录制功能，则在Video表中创建一条数据
+        if record == 'cloud':
+            Video.objects.create(
+                mid=response['id'],
+                topic=data['topic'],
+                group_name=data['group_name'],
+                agenda=data['agenda'] if 'agenda' in data else ''
+            )
+        logger.info('meeting {} was created with auto recording.'.format(response['id']))
+
         # 返回请求数据
         resp = {'code': 201, 'message': '创建成功'}
         meeting = Meeting.objects.get(mid=response['id'])
