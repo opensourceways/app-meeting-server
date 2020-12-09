@@ -414,7 +414,7 @@ class MeetingsView(GenericAPIView, CreateModelMixin):
         summary = data['agenda'] if 'agenda' in data else ''
         user_id = request.user.id
         group_id = data['group_id']
-        record = data['record']
+        record = data['record'] if 'record' in data else ''
         from datetime import datetime
         start_time = ' '.join([date, start])
         if start_time < datetime.now().strftime('%Y-%m-%d %H:%M:%S'):
