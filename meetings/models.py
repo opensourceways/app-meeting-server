@@ -70,7 +70,7 @@ class Meeting(models.Model):
 class Collect(models.Model):
     """用户收藏会议表"""
     meeting = models.ForeignKey(Meeting, on_delete=models.CASCADE)
-    user = models.ForeignKey(User, on_delete=models.CASCAeE)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
 
 
 class Video(models.Model):
