@@ -9,7 +9,6 @@ from django.db.models import Q
 from django.conf import settings
 from obs import ObsClient
 from meetings.models import Meeting, Video
-from multiprocessing.dummy import Pool as ThreadPool
 
 logger = logging.getLogger('log')
 
@@ -58,7 +57,7 @@ def download_recordings(zoom_download_url, mid):
     target_name = mid + '.mp4'
     # 判断/tmp/下有无target_name,如果存在则删掉再下载
     if target_name in os.listdir('/tmp'):
-        os.system('rm /tmp/{}'.format(target_name))
+        os.remove('/tmp/{}'.format(target_name))
     r = requests.get(url=zoom_download_url, allow_redirects=False)
     url = r.headers['location']
     tmpdir = tempfile.gettempdir()
@@ -67,6 +66,11 @@ def download_recordings(zoom_download_url, mid):
 
 
 def run(mid):
+    """
+    查询Video根据total_size判断是否需要执行后续操作（下载、上传、保存数据）
+    :param mid: 会议ID 
+    :return: 
+    """
     video = Video.objects.get(mid=mid)
 
     # 查询会议的录像信息
@@ -88,9 +92,12 @@ def run(mid):
             video_name = mid + '.mp4'
             objectKey = 'opeueuler/{}/{}/{}/{}'.format(group_name, month, mid, video_name)
             # 2。连接obs服务，实例化ObsClient
-            obsClient = ObsClient(access_key_id=os.getenv(ACCESS_KEY_ID, ''),
-                                  secret_access_key=os.getenv(SECRET_ACCESS_KEY, ''),
-                                  server=os.getenv(OBS_ENDPOINT, ''))
+            access_key_id = os.getenv('ACCESS_KEY_ID', '')
+            secret_access_key = os.getenv('SECRET_ACCESS_KEY', '')
+            endpoint = os.getenv('OBS_ENDPOINT', '')
+            obsClient = ObsClient(access_key_id=access_key_id,
+                                  secret_access_key=secret_access_key,
+                                  server='https://{}'.format(endpoint))
             # 3. 列举桶内对象
             bucketName = 'records'
             objs = obsClient.listObjects(bucketName=bucketName)
@@ -106,8 +113,9 @@ def run(mid):
                 if os.path.getsize(filename) == total_size:
                     topic = video.topic
                     agenda = video.agenda
-                    download_url = 'https://records.obs.cn-north-4.myhuaweicloud.com/{}' \
-                                   '?response-content-disposition=attachment'.format(objectKey)
+                    download_url = 'https://{}.{}/{}?response-content-disposition=attachment'.format(bucketName,
+                                                                                                     endpoint,
+                                                                                                     objectKey)
                     attenders = get_participants(mid)
                     # 生成metadata
                     metadata = {
@@ -137,7 +145,7 @@ def run(mid):
                         logger.error(e2)
                 else:
                     # 否则，删除刚下载的文件
-                    os.system('rm {}'.format(filename))
+                    os.remove(filename)
             except FileNotFoundError as e:
                 logger.error(e)
 
