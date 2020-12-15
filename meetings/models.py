@@ -86,4 +86,4 @@ class Video(models.Model):
     zoom_download_url = models.CharField(verbose_name='zoom下载地址', max_length=128, blank=True, null=True)
     download_url = models.CharField(verbose_name='下载地址', max_length=128, blank=True, null=True)
     thumbnail = models.ImageField(verbose_name='缩略图', blank=True, null=True)
-    
+
