@@ -4,6 +4,7 @@ import os
 import requests
 import tempfile
 import wget
+import multiprocessing
 from django.db.models import Q
 from django.conf import settings
 from obs import ObsClient
@@ -146,7 +147,7 @@ if __name__ == '__main__':
     past_meetings = Meeting.objects.filter(Q(date__gt=str(datetime.datetime.now() - datetime.timedelta(days=2))) &
                                            Q(date__lte=datetime.datetime.now().strftime('%Y-%m-%d')))
     recent_mids = [x for x in meeting_ids if x in past_meetings.values_list('mid', flat=True)]
-    pool = ThreadPool()
+    pool = multiprocessing.Pool()
     pool.map(run, recent_mids)
     pool.close()
     pool.join()
