@@ -88,9 +88,9 @@ def run(mid):
             video_name = mid + '.mp4'
             objectKey = 'opeueuler/{}/{}/{}/{}'.format(group_name, month, mid, video_name)
             # 2。连接obs服务，实例化ObsClient
-            obsClient = ObsClient(access_key_id='OHHM0K0A3VR5CJJ8R4OY',
-                                  secret_access_key='K4Z1LaE3kGrNklDa9oDWPlrk0qQ5Q5XUkyEza6rR',
-                                  server='https://obs.cn-north-4.myhuaweicloud.com')
+            obsClient = ObsClient(access_key_id=os.getenv(ACCESS_KEY_ID, ''),
+                                  secret_access_key=os.getenv(SECRET_ACCESS_KEY, ''),
+                                  server=os.getenv(OBS_ENDPOINT, ''))
             # 3. 列举桶内对象
             bucketName = 'records'
             objs = obsClient.listObjects(bucketName=bucketName)
