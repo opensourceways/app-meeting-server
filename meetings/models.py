@@ -70,7 +70,7 @@ class Meeting(models.Model):
 class Collect(models.Model):
     """用户收藏会议表"""
     meeting = models.ForeignKey(Meeting, on_delete=models.CASCADE)
-    user = models.ForeignKey(User, on_delete=models.CASCAeE)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
 
 
 class Video(models.Model):
@@ -82,6 +82,8 @@ class Video(models.Model):
     attenders = models.TextField(verbose_name='参会人', blank=True, null=True)
     start = models.CharField(verbose_name='记录开始时间', max_length=30, blank=True, null=True)
     end = models.CharField(verbose_name='记录结束时间', max_length=30, blank=True, null=True)
+    total_size = models.IntegerField(verbose_name='总文件大小', blank=True, null=True)
     zoom_download_url = models.CharField(verbose_name='zoom下载地址', max_length=128, blank=True, null=True)
     download_url = models.CharField(verbose_name='下载地址', max_length=128, blank=True, null=True)
-    thumbnail = models.ImageField(validators='缩略图', blank=True, null=True)
+    thumbnail = models.ImageField(verbose_name='缩略图', blank=True, null=True)
+    
