@@ -68,85 +68,90 @@ def download_recordings(zoom_download_url, mid):
 def run(mid):
     """
     查询Video根据total_size判断是否需要执行后续操作（下载、上传、保存数据）
-    :param mid: 会议ID 
-    :return: 
+    :param mid: 会议ID
+    :return:
     """
+    logger.info('handle recordings: {}'.format(mid))
     video = Video.objects.get(mid=mid)
-
     # 查询会议的录像信息
     recordings = get_recordings(mid)
     if recordings:
         total_size = recordings['total_size']
-
+        logger.info('total size of the recordings: {}'.format(total_size))
         # 数据库中video的total_size存在且小于total_size,或video的total_size不存在，则继续操作
         if (video.total_size and video.total_size < total_size) or not video.total_size:
             # 收集录像信息待用
             start = recordings['recording_files'][0]['recording_start']
             end = recordings['recording_files'][0]['recording_end']
             zoom_download_url = recordings['recording_files'][0]['download_url']
-
-            # 1.预备文件上传路径
+            # 预备文件上传路径
             month = datetime.datetime.strptime(start.replace('T', ' ').replace('Z', ''), "%Y-%m-%d %H:%M:%S").strftime(
                 "%b").lower()
             group_name = video.group_name
             video_name = mid + '.mp4'
             objectKey = 'opeueuler/{}/{}/{}/{}'.format(group_name, month, mid, video_name)
-            # 2。连接obs服务，实例化ObsClient
+            # 连接obs服务，实例化ObsClient
             access_key_id = os.getenv('ACCESS_KEY_ID', '')
             secret_access_key = os.getenv('SECRET_ACCESS_KEY', '')
             endpoint = os.getenv('OBS_ENDPOINT', '')
-            obsClient = ObsClient(access_key_id=access_key_id,
-                                  secret_access_key=secret_access_key,
-                                  server='https://{}'.format(endpoint))
-            # 3. 列举桶内对象
-            bucketName = 'records'
-            objs = obsClient.listObjects(bucketName=bucketName)
-            keys = [x['key'] for x in objs['body']['contents']]
-            # 4. 判断obs服务上是否存在objectKey的文件，存在则删除obs上的对象
-            if objectKey in keys:
-                obsClient.deleteObject(bucketName=bucketName, objectKey=objectKey)
-
-            # 下载录像
-            filename = download_recordings(zoom_download_url, str(mid))
             try:
-                # 若下载的录像的大小和查询到的total_size相等，则继续
-                if os.path.getsize(filename) == total_size:
-                    topic = video.topic
-                    agenda = video.agenda
-                    download_url = 'https://{}.{}/{}?response-content-disposition=attachment'.format(bucketName,
-                                                                                                     endpoint,
-                                                                                                     objectKey)
-                    attenders = get_participants(mid)
-                    # 生成metadata
-                    metadata = {
-                        "meeting_id": mid,
-                        "meeting_topic": topic,
-                        "sig": group_name,
-                        "agenda": agenda,
-                        "record_start": start,
-                        "record_end": end,
-                        "download_url": download_url,
-                        "total_size": total_size,
-                        "attenders": attenders
-                    }
-
-                    # 上传视频
-                    try:
-                        res = obsClient.uploadFile(bucketName=bucketName, objectKey=objectKey, uploadFile=filename,
-                                                   taskNum=10, enableCheckpoint=True, metadata=metadata)
+                obsClient = ObsClient(access_key_id=access_key_id,
+                                      secret_access_key=secret_access_key,
+                                      server='https://{}'.format(endpoint))
+                logger.info('connect OBS client successfully.')
+                # 下载录像
+                filename = download_recordings(zoom_download_url, str(mid))
+                logger.info('download file: {}'.format(filename))
+                try:
+                    # 若下载的录像的大小和查询到的total_size相等，则继续
+                    download_file_size = os.path.getsize(filename)
+                    logger.info('the size of download file: {}'.format(download_file_size))
+                    if download_file_size == total_size:
+                        topic = video.topic
+                        agenda = video.agenda
+                        bucketName = 'records'
+                        download_url = 'https://{}.{}/{}?response-content-disposition=attachment'.format(bucketName,
+                                                                                                         endpoint,
+                                                                                                         objectKey)
+                        attenders = get_participants(mid)
+                        # 生成metadata
+                        metadata = {
+                            "meeting_id": mid,
+                            "meeting_topic": topic,
+                            "sig": group_name,
+                            "agenda": agenda,
+                            "record_start": start,
+                            "record_end": end,
+                            "download_url": download_url,
+                            "total_size": total_size,
+                            "attenders": attenders
+                        }
+                        # 上传视频
                         try:
-                            if res['status'] == 200:
-                                # 更新数据库
-                                video.update(start=start, end=end, zoom_download_url=zoom_download_url,
-                                             download_url=download_url, total_size=total_size, attenders=attenders)
-                        except KeyError as e3:
-                            logger.error(e3)
-                    except Exception as e2:
-                        logger.error(e2)
-                else:
-                    # 否则，删除刚下载的文件
-                    os.remove(filename)
-            except FileNotFoundError as e:
+                            # 断点续传上传文件
+                            res = obsClient.uploadFile(bucketName=bucketName, objectKey=objectKey, uploadFile=filename,
+                                                       taskNum=10, enableCheckpoint=True, metadata=metadata)
+                            try:
+                                if res['status'] == 200:
+                                    logger.info('upload file {} successfully'.format(filename))
+                                    # 更新数据库
+                                    try:
+                                        video.update(start=start, end=end, zoom_download_url=zoom_download_url,
+                                                     download_url=download_url, total_size=total_size,
+                                                     attenders=attenders)
+                                        logger.info('update data in database')
+                                    except Exception as e4:
+                                        logger.error('fail to update database!', e4)
+                            except KeyError as e3:
+                                logger.error('fail to upload file!', e3)
+                        except Exception as e2:
+                            logger.error('upload file error!', e2)
+                    else:
+                        # 否则，删除刚下载的文件
+                        os.remove(filename)
+                except FileNotFoundError as e1:
+                    logger.error(e1)
+            except Exception as e:
                 logger.error(e)
 
 
