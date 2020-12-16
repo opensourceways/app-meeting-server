@@ -104,6 +104,7 @@ def download_upload_recordings(start, end, zoom_download_url, mid, total_size, v
         if download_file_size == total_size:
             topic = video.topic
             agenda = video.agenda
+            community = video.community
             bucketName = os.getenv('OBS_BUCKETNAME', '')
             if not bucketName:
                 logger.error('mid: {}, bucketName required'.format(mid))
@@ -116,6 +117,7 @@ def download_upload_recordings(start, end, zoom_download_url, mid, total_size, v
             metadata = {
                 "meeting_id": mid,
                 "meeting_topic": topic,
+                "community": community,
                 "sig": group_name,
                 "agenda": agenda,
                 "record_start": start,
@@ -129,7 +131,6 @@ def download_upload_recordings(start, end, zoom_download_url, mid, total_size, v
                 # 断点续传上传文件
                 res = obs_client.uploadFile(bucketName=bucketName, objectKey=object_key, uploadFile=filename,
                                             taskNum=10, enableCheckpoint=True, metadata=metadata)
-                #res = obs_client.putFile(bucketName=bucketName, objectKey=object_key, file_path=filename, metadata=metadata)
                 try:
                     if res['status'] == 200:
                         logger.info('mid: {}, upload file {} successfully'.format(mid, filename))
