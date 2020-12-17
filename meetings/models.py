@@ -46,7 +46,7 @@ class GroupUser(models.Model):
 class Meeting(models.Model):
     """会议表"""
     topic = models.CharField(verbose_name='会议主题', max_length=128)
-    community = models.CharField(verbose_name='社区', max_length=40, name=True, blank=True)
+    community = models.CharField(verbose_name='社区', max_length=40, null=True, blank=True)
     group_name = models.CharField(verbose_name='SIG组', max_length=40, default='')
     sponsor = models.CharField(verbose_name='发起人', max_length=20)
     date = models.CharField(verbose_name='会议日期', max_length=30)
@@ -78,7 +78,7 @@ class Video(models.Model):
     """会议记录表"""
     mid = models.CharField(verbose_name='会议id', max_length=12)
     topic = models.CharField(verbose_name='会议名称', max_length=50)
-    community = models.CharField(verbose_name='社区', max_length=40, name=True, blank=True)
+    community = models.CharField(verbose_name='社区', max_length=40, null=True, blank=True)
     group_name = models.CharField(verbose_name='所属sig组', max_length=50)
     agenda = models.TextField(verbose_name='会议简介', blank=True, null=True)
     attenders = models.TextField(verbose_name='参会人', blank=True, null=True)
