@@ -410,6 +410,7 @@ class MeetingsView(GenericAPIView, CreateModelMixin):
         start = data['start']
         end = data['end']
         topic = data['topic']
+        community = data['community'] if 'community' in data else 'openeuler'
         emaillist = data['emaillist'] if 'emaillist' in data else ''
         summary = data['agenda'] if 'agenda' in data else ''
         user_id = request.user.id
@@ -497,6 +498,7 @@ class MeetingsView(GenericAPIView, CreateModelMixin):
         Meeting.objects.create(
             mid=response['id'],
             topic=data['topic'],
+            community=community,
             sponsor=data['sponsor'],
             group_name=data['group_name'],
             date=date,
@@ -519,6 +521,7 @@ class MeetingsView(GenericAPIView, CreateModelMixin):
             Video.objects.create(
                 mid=response['id'],
                 topic=data['topic'],
+                community=community,
                 group_name=data['group_name'],
                 agenda=data['agenda'] if 'agenda' in data else ''
             )
