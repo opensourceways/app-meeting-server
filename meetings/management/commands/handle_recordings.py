@@ -208,7 +208,7 @@ def run(mid):
                     logger.info('meeting {}: OBS存储服务中无此对象'.format(mid))
                     download_upload_recordings(start, end, zoom_download_url, mid, total_size, video, endpoint, object_key,
                                                group_name, obs_client)
-                if object_key in key_size_map.keys() and key_size_map[object_key] >= total_size:
+                elif object_key in key_size_map.keys() and key_size_map[object_key] >= total_size:
                     logger.info('meeting {}: OBS存储服务中已存在该对象且无需替换'.format(mid))
                     return 
                 else:
