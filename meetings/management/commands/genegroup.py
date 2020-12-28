@@ -112,7 +112,7 @@ class Command(BaseCommand):
                 irc = '#openeuler-dev'
             sig.append(irc)
 
-            # 获取ownersa
+            # 获取owners
             url = 'https://gitee.com/openeuler/community/blob/master/sig/{}/OWNERS'.format(sig[0])
             r = requests.get(url)
             html = HTML(r.text)
@@ -157,4 +157,3 @@ class Command(BaseCommand):
         t4 = time.time()
         self.logger.info('Has updated database, wasted time: {}'.format(t4 - t3))
         self.logger.info('All done. Wasted time: {}'.format(t4 - t1))
-
