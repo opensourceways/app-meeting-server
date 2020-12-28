@@ -2,7 +2,10 @@ import requests
 import lxml
 import time
 import logging
+import os
+import subprocess
 import sys
+import yaml
 from lxml.etree import HTML
 from meetings.models import Group
 from django.core.management.base import BaseCommand
@@ -19,24 +22,21 @@ class Command(BaseCommand):
             sys.exit(1)
         t1 = time.time()
         self.logger.info('Starting to genegroup...')
-        url = 'https://gitee.com/openeuler/community/tree/master/sig'
-        r = requests.get(url)
-        html = HTML(r.content)
-        assert isinstance(html, lxml.etree._Element)
+        if os.path.exists('sigs.yaml'):
+            os.remove('sigs.yaml')
+        subprocess.call('wget https://gitee.com/openeuler/community/raw/master/sig/sigs.yaml', shell=True)
+        if not os.path.exists('sigs.yaml'):
+            self.logger.error('can not download sigs.yaml, exit...')
+            sys.exit(1)
+        f = open('sigs.yaml', 'r')
+        sigs = yaml.load(f.read(), Loader=yaml.Loader)['sigs']
+        f.close()
         sigs_list = []
-        i = 3
-        while True:
-            sig_name = html.xpath("//div[@id='tree-slider']/div[{}]/div[1]/a/@title".format(i))[0]
-            sig_page = html.xpath("//div[@id='tree-slider']/div[{}]/div[1]/a/@href".format(i))[0]
+        for sig in sigs:
+            sig_name = sig['name']
+            sig_page = 'https://gitee.com/openeuler/community/tree/master/sig/{}'.format(sig_name)
             etherpad = 'https://etherpad.openeuler.org/p/{}-meetings'.format(sig_name)
-            if sig_name == 'sigs.yaml':
-                break
-            i += 2
-            if sig_name == 'sig-template':
-                continue
-            # 获取所有sig的名称、首页和etherpad
-            sigs_list.append([sig_name, 'https://gitee.com' + sig_page, etherpad])
-
+            sigs_list.append([sig_name, sig_page, etherpad])
         sigs_list = sorted(sigs_list)
         t2 = time.time()
         self.logger.info('Has got sigs_list, wasted time: {}'.format(t2 - t1))
@@ -74,7 +74,7 @@ class Command(BaseCommand):
         for sig in sigs_list:
             for owner in owners:
                 if owner in maintainer_dict[sig[0]]:
-                    owners_sigs[owner].append(sig[0]) 
+                    owners_sigs[owner].append(sig[0])
 
         t3 = time.time()
         self.logger.info('Has got owners_sigs, wasted time: {}'.format(t3 - t2))
@@ -122,7 +122,7 @@ class Command(BaseCommand):
             for i in res[1:]:
                 maintainer = i.strip().split('-')[-1].strip()
                 params = {
-                    'access_token': access_token        
+                    'access_token': access_token
                 }
                 r = requests.get('https://gitee.com/api/v5/users/{}'.format(maintainer), params=params)
                 owner = {}
