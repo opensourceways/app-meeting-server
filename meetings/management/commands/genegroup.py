@@ -32,7 +32,7 @@ class Command(BaseCommand):
             if sig_name == 'sigs.yaml':
                 break
             i += 2
-            if sig_name == 'sig-template':
+            if sig_name == 'sig-template' or sig_name == 'README.md':
                 continue
             # 获取所有sig的名称、首页和etherpad
             sigs_list.append([sig_name, 'https://gitee.com' + sig_page, etherpad])
