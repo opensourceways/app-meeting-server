@@ -55,7 +55,7 @@ def sendmail(topic, date, start, join_url, sig_name, toaddrs, summary=None, encl
         body_of_email = '''
         <html>
         <body>
-        <div class='zh'>
+        <div class="zh" style="font-family: 'Microsoft YaHei',serif">
         <p>您好！</p>
         <p>openEuler {0} SIG 邀请您参加 {1} 召开的ZOOM会议</p>
         <p>会议主题：{3}</p>
@@ -65,7 +65,7 @@ def sendmail(topic, date, start, join_url, sig_name, toaddrs, summary=None, encl
         <br/>
         <br/>
         </div>
-        <div class='en'>
+        <div class="en" style="font-family: 'Microsoft YaHei UI',serif">
         <p>Hello!</p>
         <p>openEuler {0} SIG invites you to attend the ZOOM conference will be held at {1},</p>
         <p>The subject of the conference is {3},</p>
