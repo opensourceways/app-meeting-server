@@ -68,18 +68,56 @@ def download_recordings(zoom_download_url, mid):
     :param mid: 会议ID
     :return: 下载的文件名
     """
+    tmpdir = tempfile.gettempdir()
     target_name = mid + '.mp4'
     # 判断/tmp/下有无target_name,如果存在则删掉再下载
-    if target_name in os.listdir('/tmp'):
-        os.remove('/tmp/{}'.format(target_name))
+    if target_name in os.listdir(tmpdir):
+        os.remove(os.path.join(tmpdir, target_name))
     r = requests.get(url=zoom_download_url, allow_redirects=False)
     url = r.headers['location']
-    tmpdir = tempfile.gettempdir()
+    # tmpdir = tempfile.gettempdir()
     filename = wget.download(url, out=os.path.join(tmpdir, target_name))
     return filename
 
 
-def download_upload_recordings(start, end, zoom_download_url, mid, total_size, video, endpoint, object_key, group_name,
+def generate_cover(mid, topic, group_name, date, filename):
+    """生成封面"""
+    html_path = filename.replace('.mp4', '.html')
+    image_path = filename.replace('.mp4', '.png')
+    f = open(html_path, 'w')
+    content = """
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <title>Title</title>
+    </head>
+    <body>
+    <div style="display: inline-block; width: 63rem; height: 42rem;text-align: center">
+        <h1 style="margin-top: 10rem">{0}</h1>
+        <h4 style="margin-top: 12rem">兴趣组：{1}</h4>
+        <h4>时间：{2}</h4>
+        <img src="openeuler.jpg" alt="openEuler" />
+    </div>
+    </body>
+    </html>
+    """.format(topic, group_name, date)
+    f.write(content)
+    f.close()
+    os.system("cp static/img/openeuler.jpg {}".format(os.path.dirname(filename)))
+    os.system("wkhtmltoimage --enable-local-file-access {} {}".format(html_path, image_path))
+    logger.info("meeting {}: 生成封面".format(mid))
+
+
+def upload_cover(filename, obs_client, bucketName, cover_path):
+    """OBS上传封面"""
+    res = obs_client.uploadFile(bucketName=bucketName, objectKey=cover_path, uploadFile=filename.replace('.mp4', '.png'),
+                                taskNum=10, enableCheckpoint=True)
+    return res
+
+
+def download_upload_recordings(start, end, zoom_download_url, mid, total_size, video, endpoint, object_key,
+                               group_name,
                                obs_client):
     """
     下载、上传录像及后续操作
@@ -98,11 +136,11 @@ def download_upload_recordings(start, end, zoom_download_url, mid, total_size, v
     # 下载录像
     filename = download_recordings(zoom_download_url, str(mid))
     print()
-    logger.info('meeting {}: download {}'.format(mid, filename))
+    logger.info('meeting {}: 从OBS下载{}'.format(mid, filename))
     try:
         # 若下载的录像的大小和查询到的total_size相等，则继续
         download_file_size = os.path.getsize(filename)
-        logger.info('meeting {}: the size of download file: {}'.format(mid, download_file_size))
+        logger.info('meeting {}: 下载的文件大小为{}'.format(mid, download_file_size))
         if download_file_size == total_size:
             topic = video.topic
             agenda = video.agenda
@@ -135,21 +173,35 @@ def download_upload_recordings(start, end, zoom_download_url, mid, total_size, v
                                             taskNum=10, enableCheckpoint=True, metadata=metadata)
                 try:
                     if res['status'] == 200:
-                        print()
-                        logger.info('meeting {}: upload {} successfully'.format(mid, filename))
-                        # 更新数据库
-                        try:
-                            Video.objects.filter(mid=mid).update(start=start, end=end, zoom_download_url=zoom_download_url,
-                                         download_url=download_url, total_size=total_size,
-                                         attenders=attenders)
-                            print()
-                            logger.info('meeting {}: update database'.format(mid))
-                            # 删除临时文件
-                            os.remove(filename)
-                            print()
-                            logger.info('meeting {}: remove temp file {}'.format(mid, filename))
-                        except Exception as e4:
-                            logger.error('meeting {}: fail to update database!'.format(mid), e4)
+                        logger.info('meeting {}: OBS视频上传成功'.format(mid, filename))
+                        # 生成封面
+                        date = datetime.datetime.strptime(start.replace('T', ' ').replace('Z', ''),
+                                                          "%Y-%m-%d %H:%M:%S").strftime(
+                            '%Y-%m-%d')
+                        generate_cover(mid, topic, group_name, date, filename)
+                        # 上传封面
+                        cover_path = res['body']['key'].replace('.mp4', '.png')
+                        res2 = upload_cover(filename, obs_client, bucketName, cover_path)
+                        if res2['status'] == 200:
+                            logger.info('meeting {}: OBS封面上传成功'.format(mid))
+                            try:
+                                Video.objects.filter(mid=mid).update(start=start, end=end,
+                                                                     zoom_download_url=zoom_download_url,
+                                                                     download_url=download_url, total_size=total_size,
+                                                                     attenders=attenders)
+                                logger.info('meeting {}: 更新数据库'.format(mid))
+                                # 删除临时文件
+                                os.remove(filename)
+                                logger.info('meeting {}: 移除临时文件{}'.format(mid, filename))
+                                os.remove(filename.replace('.mp4', '.html'))
+                                logger.info(
+                                    'meeting {}: 移除临时文件{}'.format(mid, filename.replace('.mp4', '.html')))
+                                os.remove(filename.replace('.mp4', '.png'))
+                                logger.info(
+                                    'meeting {}: 移除临时文件{}'.format(mid, filename.replace('.mp4', '.png')))
+                                return topic, filename
+                            except Exception as e4:
+                                logger.error('meeting {}: fail to update database!'.format(mid), e4)
                 except KeyError as e3:
                     logger.error('meeting {}: fail to upload file!'.format(mid), e3)
             except Exception as e2:
@@ -167,19 +219,19 @@ def run(mid):
     :param mid: 会议ID
     :return:
     """
-    logger.info('meeting {}: handle recordings'.format(mid))
+    logger.info('meeting {}: 开始处理'.format(mid))
     video = Video.objects.get(mid=mid)
     # 查询会议的录像信息
     recordings = get_recordings(mid)
     if recordings:
         total_size = recordings['total_size']
-        logger.info('meeting {}: the total size of the recording is {}'.format(mid, total_size))
+        logger.info('meeting {}: 录像文件的总大小为{}'.format(mid, total_size))
         # 连接obs服务，实例化ObsClient
         access_key_id = os.getenv('ACCESS_KEY_ID', '')
         secret_access_key = os.getenv('SECRET_ACCESS_KEY', '')
         endpoint = os.getenv('OBS_ENDPOINT', '')
         bucketName = os.getenv('OBS_BUCKETNAME', '')
-        if not access_key_id or not secret_access_key or not endpoint or not bucketName:
+        if not (access_key_id and secret_access_key and endpoint and bucketName):
             logger.error('losing required arguments for ObsClient')
             return
         try:
@@ -199,22 +251,25 @@ def run(mid):
             end = recordings['recording_files'][0]['recording_end']
             zoom_download_url = recordings['recording_files'][0]['download_url']
             if not objs['body']['contents']:
-                logger.info('meeting {}: OBS无存储对象'.format(mid))
-                download_upload_recordings(start, end, zoom_download_url, mid, total_size, video, endpoint, object_key,
+                logger.info('meeting {}: OBS无存储对象，开始下载视频'.format(mid))
+                topic, filename = download_upload_recordings(start, end, zoom_download_url, mid, total_size, video, endpoint, object_key,
                                            group_name, obs_client)
+                return {"mid": mid, "topic": topic, "filename": filename}
             else:
-                key_size_map = {x['key']:x['size'] for x in objs['body']['contents']}
+                key_size_map = {x['key']: x['size'] for x in objs['body']['contents']}
                 if object_key not in key_size_map.keys():
-                    logger.info('meeting {}: OBS存储服务中无此对象'.format(mid))
-                    download_upload_recordings(start, end, zoom_download_url, mid, total_size, video, endpoint, object_key,
+                    logger.info('meeting {}: OBS存储服务中无此对象，开始下载视频'.format(mid))
+                    topic, filename = download_upload_recordings(start, end, zoom_download_url, mid, total_size, video, endpoint,
+                                               object_key,
                                                group_name, obs_client)
+                    return {"mid": mid, "topic": topic, "filename": filename}
                 elif object_key in key_size_map.keys() and key_size_map[object_key] >= total_size:
                     logger.info('meeting {}: OBS存储服务中已存在该对象且无需替换'.format(mid))
-                    return 
+                    return
                 else:
-                    logger.info('meeting {}: OBS存储服务中该对象需要替换'.format(mid))
-                    download_upload_recordings(start, end, zoom_download_url, mid, total_size, video, endpoint,
+                    logger.info('meeting {}: OBS存储服务中该对象需要替换，开始下载视频'.format(mid))
+                    topic, filename = download_upload_recordings(start, end, zoom_download_url, mid, total_size, video, endpoint,
                                                object_key, group_name, obs_client)
+                    return {"mid": mid, "topic": topic, "filename": filename}
         except Exception as e:
             logger.error(e)
-
