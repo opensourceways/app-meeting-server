@@ -540,12 +540,16 @@ class MyMeetingsView(GenericAPIView, ListModelMixin):
     """查询我创建的所有会议"""
     serializer_class = MeetingListSerializer
     queryset = Meeting.objects.all().filter(is_delete=0)
+    permission_classes = (permissions.IsAuthenticated,)
+    authentication_classes = (authentication.JWTAuthentication,)
 
     @swagger_auto_schema(operation_summary='查询我创建的所有会议')
     def get(self, request, *args, **kwargs):
-        user_id = kwargs.get('pk')
-        self.queryset = self.queryset.filter(user_id=user_id).order_by('-date', 'start')
         return self.list(request, *args, **kwargs)
+    
+    def get_queryset(self):
+        queryset = Meeting.objects.filter(is_delete=0, user_id=self.request.user.id).order_by('-date', 'start')
+        return queryset
 
 
 class AllMeetingsView(GenericAPIView, ListModelMixin):
@@ -568,15 +572,7 @@ class CollectView(GenericAPIView, ListModelMixin, CreateModelMixin):
     def post(self, request, *args, **kwargs):
         user_id = self.request.user.id
         meeting_id = self.request.data['meeting']
-        meeting = Meeting.objects.filter(id=meeting_id)
-        topic = meeting.values('topic')
-        date = meeting.values('date')
-        start_time = meeting.values('start')
-        start_url = meeting.values('start_url')
-        sig_name = meeting.values('group_name')
-        toaddrs = meeting.values('emaillist')
-        
-        collect = Collect.objects.create(meeting_id=meeting_id, user_id=user_id)
+        Collect.objects.create(meeting_id=meeting_id, user_id=user_id)
         resp = {'code': 201, 'msg': 'collect successfully'}
         return JsonResponse(resp)
 
