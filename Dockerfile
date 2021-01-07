@@ -8,7 +8,7 @@ WORKDIR /work/app-meeting-server
 COPY . /work/app-meeting-server
 COPY ./deploy/fonts/simsun.ttc /usr/share/fonts
 
-RUN cd /work/app-meeting-server && pip install -r requirements.txt && apt update && apt install -y wkhtmltopng
+RUN cd /work/app-meeting-server && pip install -r requirements.txt && apt update && apt install -y wkhtmltopdf
 
 EXPOSE 8080
 ENTRYPOINT ["uwsgi", "--ini", "/work/app-meeting-server/deploy/production/uwsgi.ini"]
