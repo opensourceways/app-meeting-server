@@ -4,6 +4,7 @@ import math
 import random
 import requests
 import logging
+import time
 from django.conf import settings
 from django.db.models import Q
 from django.http import JsonResponse
@@ -401,7 +402,6 @@ class MeetingsView(GenericAPIView, CreateModelMixin):
 
     @swagger_auto_schema(operation_summary='创建会议')
     def post(self, request, *args, **kwargs):
-        import time
         t1 = time.time()
         host_dict = settings.MEETING_HOSTS
         # 获取data
@@ -416,16 +416,17 @@ class MeetingsView(GenericAPIView, CreateModelMixin):
         user_id = request.user.id
         group_id = data['group_id']
         record = data['record'] if 'record' in data else ''
-        from datetime import datetime
         start_time = ' '.join([date, start])
-        if start_time < datetime.now().strftime('%Y-%m-%d %H:%M:%S'):
+        if start_time < datetime.datetime.now().strftime('%Y-%m-%d %H:%M'):
             logger.warning('The start time should not be earlier than the current time.')
             return JsonResponse({'code': 1005, 'message': '请输入正确的开始时间'})
         if start >= end:
             logger.warning('The end time must be greater than the start time.')
             return JsonResponse({'code': 1001, 'message': '请输入正确的结束时间'})
-        start_search = str(int(start.split(':')[0]) - 1) + ':00'
-        end_search = str(int(end.split(':')[0]) + 1) + ':00'
+        start_search = datetime.datetime.strftime((datetime.datetime.strptime(start, '%H:%M') - datetime.timedelta(minutes=60)),
+                                                          '%H:%M')
+        end_search = datetime.datetime.strftime((datetime.datetime.strptime(end, '%H:%M') + datetime.timedelta(minutes=60)),
+                                                        '%H:%M')
         # 查询待创建的会议与现有的预定会议是否冲突
         unavailable_host_id = []
         available_host_id = []
