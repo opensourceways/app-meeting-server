@@ -85,7 +85,12 @@ class Video(models.Model):
     start = models.CharField(verbose_name='记录开始时间', max_length=30, blank=True, null=True)
     end = models.CharField(verbose_name='记录结束时间', max_length=30, blank=True, null=True)
     total_size = models.IntegerField(verbose_name='总文件大小', blank=True, null=True)
-    zoom_download_url = models.CharField(verbose_name='zoom下载地址', max_length=128, blank=True, null=True)
     download_url = models.CharField(verbose_name='下载地址', max_length=128, blank=True, null=True)
-    thumbnail = models.ImageField(verbose_name='缩略图', blank=True, null=True)
 
+
+class Record(models.Model):
+    """录像表"""
+    mid = models.CharField(verbose_name='会议id', max_length=12)
+    platform = models.CharField(verbose_name='平台', max_length=50)
+    video_url = models.CharField(verbose_name='播放地址', max_length=128, null=True, blank=True)
+    thumbnail = models.CharField(verbose_name='缩略图', max_length=128, null=True, blank=True)

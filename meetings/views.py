@@ -14,7 +14,7 @@ from rest_framework.generics import GenericAPIView
 from rest_framework.mixins import ListModelMixin, CreateModelMixin, RetrieveModelMixin, DestroyModelMixin, \
     UpdateModelMixin
 from rest_framework_simplejwt import authentication
-from meetings.models import User, Group, Meeting, GroupUser, Collect, Video
+from meetings.models import User, Group, Meeting, GroupUser, Collect, Video, Record
 from meetings.permissions import MaintainerPermission, AdminPermission
 from meetings.serializers import LoginSerializer, GroupsSerializer, MeetingSerializer, UsersSerializer, \
     UserSerializer, GroupUserAddSerializer, GroupSerializer, UsersInGroupSerializer, \
@@ -346,7 +346,9 @@ class MeetingsDataView(GenericAPIView, ListModelMixin):
                     'url': User.objects.get(id=meeting.user_id).avatar,
                     'join_url': meeting.join_url,
                     'meeting_id': meeting.mid,
-                    'etherpad': meeting.etherpad
+                    'etherpad': meeting.etherpad,
+                    'video_url': '' if not Record.objects.filter(mid=meeting.mid, platform='bilibili') else
+                    Record.objects.filter(mid=meeting.mid, platform='bilibili').values()[0]['url']
                 } for meeting in Meeting.objects.filter(is_delete=0, date=date)]
             })
         return Response({'tableData': tableData})
@@ -387,7 +389,9 @@ class SigMeetingsDataView(GenericAPIView, ListModelMixin):
                         'url': User.objects.get(id=meeting.user_id).avatar,
                         'join_url': meeting.join_url,
                         'meeting_id': meeting.mid,
-                        'etherpad': meeting.etherpad
+                        'etherpad': meeting.etherpad,
+                        'video_url': '' if not Record.objects.filter(mid=meeting.mid, platform='bilibili') else
+                        Record.objects.filter(mid=meeting.mid, platform='bilibili').values()[0]['url']
                     } for meeting in Meeting.objects.filter(is_delete=0, group_id=group_id, date=date)]
                 })
         return Response({'tableData': tableData})
@@ -492,7 +496,7 @@ class MeetingsView(GenericAPIView, CreateModelMixin):
         sig_name = data['group_name']
         toaddrs = emaillist
         
-        p1 = Process(target=sendmail, args=(topic, date, start, join_url, sig_name, toaddrs, summary))
+        p1 = Process(target=sendmail, args=(topic, date, start, join_url, sig_name, toaddrs, summary, record))
         p1.start() 
 
         # 数据库生成数据

@@ -1,16 +1,16 @@
 import logging
-import os
 import re
 import smtplib
 from django.conf import settings
 from email.mime.application import MIMEApplication
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
-
+from meetings.utils.generate_email_template import *
 
 logger = logging.getLogger('log')
 
-def sendmail(topic, date, start, join_url, sig_name, toaddrs, summary=None, enclosure_paths=None):
+
+def sendmail(topic, date, start, join_url, sig_name, toaddrs, summary=None, record=None, enclosure_paths=None):
     start_time = ' '.join([date, start])
     toaddrs = toaddrs.replace(' ', '').replace('，', ',').replace(';', ',').replace('；', ',')
     toaddrs_list = toaddrs.split(',')
@@ -29,53 +29,15 @@ def sendmail(topic, date, start, join_url, sig_name, toaddrs, summary=None, encl
     msg = MIMEMultipart()
 
     # 添加邮件主体
-    body_of_email = '''
-    <html>
-    <body>
-    <div class='zh'>
-    <p>您好！</p>
-    <p>openEuler {0} SIG 邀请您参加 {1} 召开的ZOOM会议</p>
-    <p>会议主题：{3}</p>
-    <p>会议链接：<a href="{2}">{2}</a></p>
-    <p>更多资讯尽在：<a href="https://openeuler.org/zh/">https://openeuler.org/zh/</a></p>
-    <br/>
-    <br/>
-    </div>
-    <div class='en'>
-    <p>Hello!</p>
-    <p>openEuler {0} SIG invites you to attend the ZOOM conference will be held at {1},</p>
-    <p>The subject of the conference is {3},</p>
-    <p>You can join the meeting at <a href="{2}">{2}</a>.</p>
-    <p><a href="https://openeuler.org/zh/">More information</a></p>
-    </div>
-    </body>
-    </html>
-    '''.format(sig_name, start_time, join_url, topic)
-    if summary:
-        body_of_email = '''
-        <html>
-        <body>
-        <div class="zh" style="font-family: 'Microsoft YaHei',serif">
-        <p>您好！</p>
-        <p>openEuler {0} SIG 邀请您参加 {1} 召开的ZOOM会议</p>
-        <p>会议主题：{3}</p>
-        <pre style="font-family: 'Microsoft YaHei',serif">会议内容：{4}</pre>
-        <p>会议链接：<a href="{2}">{2}</a></p>
-        <p>更多资讯尽在：<a href="https://openeuler.org/zh/">https://openeuler.org/zh/</a></p>
-        <br/>
-        <br/>
-        </div>
-        <div class="en" style="font-family: 'Microsoft YaHei UI',serif">
-        <p>Hello!</p>
-        <p>openEuler {0} SIG invites you to attend the ZOOM conference will be held at {1},</p>
-        <p>The subject of the conference is {3},</p>
-        <pre style="font-family: 'Microsoft YaHei UI',serif">Summary: {4}</pre>
-        <p>You can join the meeting at <a href="{2}">{2}</a>.</p>
-        <p><a href="https://openeuler.org/zh/">More information</a></p>
-        </div>
-        </body>
-        </html>
-        '''.format(sig_name, start_time, join_url, topic, summary)
+    body_of_email = None
+    if not summary and not record:
+        body_of_email = email_template(sig_name, start_time, join_url, topic)
+    if summary and not record:
+        body_of_email = email_template_with_agenda(sig_name, start_time, join_url, topic, summary)
+    if not summary and record:
+        body_of_email = record_email_template(sig_name, start_time, join_url, topic)
+    if summary and record:
+        body_of_email = record_email_template_with_agenda(sig_name, start_time, join_url, topic, summary)
 
     content = MIMEText(body_of_email, 'html', 'utf-8')
     msg.attach(content)
