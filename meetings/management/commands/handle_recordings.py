@@ -4,12 +4,13 @@ import os
 import requests
 import tempfile
 import wget
-from multiprocessing.dummy import Pool as ThreadPool
 from django.db.models import Q
 from django.conf import settings
 from obs import ObsClient
-from meetings.models import Meeting, Video
 from django.core.management.base import BaseCommand
+from meetings.models import Meeting, Video, Record
+from multiprocessing.dummy import Pool as ThreadPool
+from meetings.utils.html_template import cover_content
 
 logger = logging.getLogger('log')
 
@@ -39,7 +40,7 @@ def get_recordings(mid):
     }
     response = requests.get(url, headers=headers)
     if response.status_code != 200:
-        logger.error('mid: {}, get recordings:'.format(mid), response.status_code, response.json()['message'])
+        print('mid: {}, get recordings:'.format(mid), response.status_code, response.json()['message'])
         return
     return response.json()
 
@@ -75,43 +76,28 @@ def download_recordings(zoom_download_url, mid):
         os.remove(os.path.join(tmpdir, target_name))
     r = requests.get(url=zoom_download_url, allow_redirects=False)
     url = r.headers['location']
-    # tmpdir = tempfile.gettempdir()
     filename = wget.download(url, out=os.path.join(tmpdir, target_name))
     return filename
 
 
-def generate_cover(mid, topic, group_name, date, filename):
+def generate_cover(mid, topic, group_name, date, filename, start_time, end_time):
     """生成封面"""
     html_path = filename.replace('.mp4', '.html')
     image_path = filename.replace('.mp4', '.png')
     f = open(html_path, 'w')
-    content = """
-    <!DOCTYPE html>
-    <html lang="en">
-    <head>
-        <meta charset="UTF-8">
-        <title>Title</title>
-    </head>
-    <body>
-    <div style="display: inline-block; width: 63rem; height: 42rem;text-align: center">
-        <h1 style="margin-top: 10rem">{0}</h1>
-        <h4 style="margin-top: 12rem">兴趣组：{1}</h4>
-        <h4>时间：{2}</h4>
-        <img src="openeuler.jpg" alt="openEuler" />
-    </div>
-    </body>
-    </html>
-    """.format(topic, group_name, date)
+    content = cover_content(topic, group_name, date, start_time, end_time)
     f.write(content)
     f.close()
-    os.system("cp static/img/openeuler.jpg {}".format(os.path.dirname(filename)))
+    os.system("cp meetings/images/cover.png {}".format(os.path.dirname(filename)))
     os.system("wkhtmltoimage --enable-local-file-access {} {}".format(html_path, image_path))
     logger.info("meeting {}: 生成封面".format(mid))
+    os.remove(os.path.join(os.path.dirname(filename), 'cover.png'))
 
 
 def upload_cover(filename, obs_client, bucketName, cover_path):
     """OBS上传封面"""
-    res = obs_client.uploadFile(bucketName=bucketName, objectKey=cover_path, uploadFile=filename.replace('.mp4', '.png'),
+    res = obs_client.uploadFile(bucketName=bucketName, objectKey=cover_path,
+                                uploadFile=filename.replace('.mp4', '.png'),
                                 taskNum=10, enableCheckpoint=True)
     return res
 
@@ -136,7 +122,7 @@ def download_upload_recordings(start, end, zoom_download_url, mid, total_size, v
     # 下载录像
     filename = download_recordings(zoom_download_url, str(mid))
     print()
-    logger.info('meeting {}: 从OBS下载{}'.format(mid, filename))
+    logger.info('meeting {}: 从OBS下载视频，本地保存为{}'.format(mid, filename))
     try:
         # 若下载的录像的大小和查询到的total_size相等，则继续
         download_file_size = os.path.getsize(filename)
@@ -178,17 +164,30 @@ def download_upload_recordings(start, end, zoom_download_url, mid, total_size, v
                         date = datetime.datetime.strptime(start.replace('T', ' ').replace('Z', ''),
                                                           "%Y-%m-%d %H:%M:%S").strftime(
                             '%Y-%m-%d')
-                        generate_cover(mid, topic, group_name, date, filename)
+                        start_time = (datetime.datetime.strptime(start.replace('T', ' ').replace('Z', ''),
+                                                                 "%Y-%m-%d %H:%M:%S") + datetime.timedelta(
+                            hours=8)).strftime('%H:%M')
+                        end_time = (datetime.datetime.strptime(end.replace('T', ' ').replace('Z', ''),
+                                                               "%Y-%m-%d %H:%M:%S") + datetime.timedelta(
+                            hours=8)).strftime('%H:%M')
+                        generate_cover(mid, topic, group_name, date, filename, start_time, end_time)
                         # 上传封面
                         cover_path = res['body']['key'].replace('.mp4', '.png')
                         res2 = upload_cover(filename, obs_client, bucketName, cover_path)
                         if res2['status'] == 200:
                             logger.info('meeting {}: OBS封面上传成功'.format(mid))
                             try:
-                                Video.objects.filter(mid=mid).update(start=start, end=end,
-                                                                     zoom_download_url=zoom_download_url,
-                                                                     download_url=download_url, total_size=total_size,
-                                                                     attenders=attenders)
+                                Video.objects.filter(mid=mid).update(start=start,
+                                                                     end=end,
+                                                                     total_size=total_size,
+                                                                     attenders=attenders,
+                                                                     download_url=download_url)
+                                if Record.objects.filter(mid=mid, platform='obs'):
+                                    Record.objects.filter(mid=mid, platform='obs').update(
+                                        url=download_url.split('?')[0], thumbnail=cover_path)
+                                else:
+                                    Record.objects.create(mid=mid, platform='obs', url=download_url.split('?')[0],
+                                                          thumbnail=cover_path)
                                 logger.info('meeting {}: 更新数据库'.format(mid))
                                 # 删除临时文件
                                 os.remove(filename)
@@ -252,24 +251,26 @@ def run(mid):
             zoom_download_url = recordings['recording_files'][0]['download_url']
             if not objs['body']['contents']:
                 logger.info('meeting {}: OBS无存储对象，开始下载视频'.format(mid))
-                topic, filename = download_upload_recordings(start, end, zoom_download_url, mid, total_size, video, endpoint, object_key,
-                                           group_name, obs_client)
+                topic, filename = download_upload_recordings(start, end, zoom_download_url, mid, total_size, video,
+                                                             endpoint, object_key,
+                                                             group_name, obs_client)
                 return {"mid": mid, "topic": topic, "filename": filename}
             else:
                 key_size_map = {x['key']: x['size'] for x in objs['body']['contents']}
                 if object_key not in key_size_map.keys():
                     logger.info('meeting {}: OBS存储服务中无此对象，开始下载视频'.format(mid))
-                    topic, filename = download_upload_recordings(start, end, zoom_download_url, mid, total_size, video, endpoint,
-                                               object_key,
-                                               group_name, obs_client)
+                    topic, filename = download_upload_recordings(start, end, zoom_download_url, mid, total_size, video,
+                                                                 endpoint, object_key,
+                                                                 group_name, obs_client)
                     return {"mid": mid, "topic": topic, "filename": filename}
                 elif object_key in key_size_map.keys() and key_size_map[object_key] >= total_size:
                     logger.info('meeting {}: OBS存储服务中已存在该对象且无需替换'.format(mid))
                     return
                 else:
                     logger.info('meeting {}: OBS存储服务中该对象需要替换，开始下载视频'.format(mid))
-                    topic, filename = download_upload_recordings(start, end, zoom_download_url, mid, total_size, video, endpoint,
-                                               object_key, group_name, obs_client)
+                    topic, filename = download_upload_recordings(start, end, zoom_download_url, mid, total_size, video,
+                                                                 endpoint,
+                                                                 object_key, group_name, obs_client)
                     return {"mid": mid, "topic": topic, "filename": filename}
         except Exception as e:
             logger.error(e)

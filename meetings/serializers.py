@@ -5,7 +5,7 @@ from django.contrib.auth.hashers import make_password
 from rest_framework import serializers
 from rest_framework.serializers import ModelSerializer
 from rest_framework_simplejwt.tokens import RefreshToken
-from meetings.models import Collect, Group, User, Meeting, GroupUser
+from meetings.models import Collect, Group, User, Meeting, GroupUser, Record
 
 
 logger = logging.getLogger('log')
@@ -95,6 +95,8 @@ class MeetingSerializer(ModelSerializer):
 
 class MeetingListSerializer(ModelSerializer):
     collection_id = serializers.SerializerMethodField()
+    video_url = serializers.SerializerMethodField()
+
     class Meta:
         model = Meeting
         fields = ['id', 'collection_id', 'user_id', 'group_id', 'topic', 'sponsor', 'group_name', 'date', 'start', 'end', 'agenda', 'etherpad', 'mid', 'join_url']
@@ -108,6 +110,11 @@ class MeetingListSerializer(ModelSerializer):
             return Collect.objects.filter(user_id=user.pk, meeting_id=obj.id).values()[0]['id']
         except IndexError:
             return
+
+    def get_video_url(self, obj):
+        video_url = Record.objects.filter(mid=obj.mid, platform='bilibili').values()[0]['url'] if Record.objects.filter(
+            mid=obj.mid, platform='bilibili') else ''
+        return video_url
 
 
 class LoginSerializer(serializers.ModelSerializer):

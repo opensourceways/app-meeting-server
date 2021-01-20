@@ -6,8 +6,10 @@ import traceback
 from bilibili_api import video, Verify
 from django.core.management import BaseCommand
 from obs import ObsClient
+from meetings.models import Record
 
 logger = logging.getLogger('log')
+
 
 class Command(BaseCommand):
     def handle(self, *args, **options):
@@ -34,8 +36,7 @@ class Command(BaseCommand):
                 continue
             # 获取对象的metadata
             metadata = obs_client.getObjectMetadata(bucketName, object_key)
-
-            metadata_dict = {x:y for x,y in metadata['header']}
+            metadata_dict = {x: y for x, y in metadata['header']}
             # 如果bvid不在metadata_dict中，则下载视频并上传视频至B站
             if 'bvid' in metadata_dict:
                 logger.info('{}已在B站上传，跳过'.format(object_key))
@@ -53,54 +54,64 @@ class Command(BaseCommand):
                 enableCheckpoint = True
                 try:
                     # 下载视频
-                    resp = obs_client.downloadFile(bucketName, object_key, videoFile, partSize, taskNum, enableCheckpoint)
+                    resp = obs_client.downloadFile(bucketName, object_key, videoFile, partSize, taskNum,
+                                                   enableCheckpoint)
                     if resp.status < 300:
                         try:
                             # 下载封面
                             img_object_key = object_key.replace('.mp4', '.png')
-                            resp2 = obs_client.downloadFile(bucketName, img_object_key, imageFile, partSize, taskNum, enableCheckpoint)
-                            if resp2.status < 300:
-                                # 将下载的视频上传至B站
-                                topic = metadata_dict['meeting_topic']
-                                mid = metadata_dict['meeting_id']
-                                community = metadata_dict['community']
-                                res = upload(topic, videoFile, imageFile, mid, community)
-                                # 修改metadata
-                                bvid = res['bvid']
-                                sig = metadata_dict['sig']
-                                agenda = metadata_dict['agenda'] if 'agenda' in metadata_dict else ''
-                                record_start = metadata_dict['record_start']
-                                record_end = metadata_dict['record_end']
-                                download_url = metadata_dict['download_url']
-                                total_size = metadata_dict['total_size']
-                                attenders = metadata_dict['attenders']
-                                metadata = {
-                                    "meeting_id": mid,
-                                    "meeting_topic": topic,
-                                    "community": community,
-                                    "sig": sig,
-                                    "agenda": agenda,
-                                    "record_start": record_start,
-                                    "record_end": record_end,
-                                    "download_url": download_url,
-                                    "total_size": total_size,
-                                    "attenders": attenders,
-                                    "bvid": bvid
-                                }
-                                try:
-                                    resp3 = obs_client.setObjectMetadata(bucketName, object_key, metadata)
-                                    if resp3.status < 300:
-                                        logger.info('{}: metadata修改成功'.format(object_key))
-                                    else:
-                                        logger.error('errorCode', resp3.errorCode)
-                                        logger.error('errorMessage', resp3.errorMessage)
-                                except:
-                                    logger.error(traceback.format_exc())
-                                # 休眠30s避免上传间隔过短
-                                time.sleep(30)
-                            else:
-                                logger.error('errorCode', resp2.errorCode)
-                                logger.error('errorMessage', resp2.errorMessage)
+                            try:
+                                resp2 = obs_client.downloadFile(bucketName, img_object_key, imageFile, partSize, taskNum,
+                                                                enableCheckpoint)
+                                if resp2.status < 300:
+                                    # 将下载的视频上传至B站
+                                    topic = metadata_dict['meeting_topic']
+                                    mid = metadata_dict['meeting_id']
+                                    community = metadata_dict['community']
+                                    res = upload(topic, videoFile, imageFile, mid, community)
+                                    try:
+                                        if not Record.objects.filter(mid=mid, platform='bilibili'):
+                                            Record.objects.create(mid=mid, platform='bilibili')
+                                    except Exception as e:
+                                        logger.error(e)
+                                    # 修改metadata
+                                    bvid = res['bvid']
+                                    sig = metadata_dict['sig']
+                                    agenda = metadata_dict['agenda'] if 'agenda' in metadata_dict else ''
+                                    record_start = metadata_dict['record_start']
+                                    record_end = metadata_dict['record_end']
+                                    download_url = metadata_dict['download_url']
+                                    total_size = metadata_dict['total_size']
+                                    attenders = metadata_dict['attenders']
+                                    metadata = {
+                                        "meeting_id": mid,
+                                        "meeting_topic": topic,
+                                        "community": community,
+                                        "sig": sig,
+                                        "agenda": agenda,
+                                        "record_start": record_start,
+                                        "record_end": record_end,
+                                        "download_url": download_url,
+                                        "total_size": total_size,
+                                        "attenders": attenders,
+                                        "bvid": bvid
+                                    }
+                                    try:
+                                        resp3 = obs_client.setObjectMetadata(bucketName, object_key, metadata)
+                                        if resp3.status < 300:
+                                            logger.info('{}: metadata修改成功'.format(object_key))
+                                        else:
+                                            logger.error('errorCode', resp3.errorCode)
+                                            logger.error('errorMessage', resp3.errorMessage)
+                                    except:
+                                        logger.error(traceback.format_exc())
+                                    # 休眠30s避免上传间隔过短
+                                    time.sleep(30)
+                                else:
+                                    logger.error('errorCode', resp2.errorCode)
+                                    logger.error('errorMessage', resp2.errorMessage)
+                            except Exception as e2:
+                                logger.error(e2)
                         except:
                             logger.error(traceback.format_exc())
                     else:
