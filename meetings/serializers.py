@@ -99,7 +99,7 @@ class MeetingListSerializer(ModelSerializer):
 
     class Meta:
         model = Meeting
-        fields = ['id', 'collection_id', 'user_id', 'group_id', 'topic', 'sponsor', 'group_name', 'date', 'start', 'end', 'agenda', 'etherpad', 'mid', 'join_url']
+        fields = ['id', 'collection_id', 'user_id', 'group_id', 'topic', 'sponsor', 'group_name', 'date', 'start', 'end', 'agenda', 'etherpad', 'mid', 'join_url', 'video_url']
 
     def get_collection_id(self, obj):
         user = None
