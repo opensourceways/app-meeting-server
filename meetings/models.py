@@ -92,5 +92,5 @@ class Record(models.Model):
     """录像表"""
     mid = models.CharField(verbose_name='会议id', max_length=12)
     platform = models.CharField(verbose_name='平台', max_length=50)
-    video_url = models.CharField(verbose_name='播放地址', max_length=128, null=True, blank=True)
+    url = models.CharField(verbose_name='播放地址', max_length=128, null=True, blank=True)
     thumbnail = models.CharField(verbose_name='缩略图', max_length=128, null=True, blank=True)
