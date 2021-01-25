@@ -182,12 +182,13 @@ def download_upload_recordings(start, end, zoom_download_url, mid, total_size, v
                                                                      total_size=total_size,
                                                                      attenders=attenders,
                                                                      download_url=download_url)
+                                url = download_url.split('?')[0]
                                 if Record.objects.filter(mid=mid, platform='obs'):
                                     Record.objects.filter(mid=mid, platform='obs').update(
-                                        url=download_url.split('?')[0], thumbnail=cover_path)
+                                        url=url, thumbnail=url.replace('.mp4', '.png'))
                                 else:
-                                    Record.objects.create(mid=mid, platform='obs', url=download_url.split('?')[0],
-                                                          thumbnail=cover_path)
+                                    Record.objects.create(mid=mid, platform='obs', url=url,
+                                                          thumbnail=url.replace('.mp4', '.png'))
                                 logger.info('meeting {}: 更新数据库'.format(mid))
                                 # 删除临时文件
                                 os.remove(filename)
