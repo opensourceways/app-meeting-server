@@ -1,11 +1,12 @@
 import logging
+import os
 import re
 import smtplib
 from django.conf import settings
 from email.mime.application import MIMEApplication
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
-from meetings.utils.email_templates import *
+from email.mime.image import MIMEImage
 
 logger = logging.getLogger('log')
 
@@ -31,16 +32,56 @@ def sendmail(topic, date, start, join_url, sig_name, toaddrs, summary=None, reco
     # 添加邮件主体
     body_of_email = None
     if not summary and not record:
-        body_of_email = email_template(sig_name, start_time, join_url, topic)
+        with open('templates/template_without_summary_without_recordings.html') as fp:
+            body = fp.read()
+            body_of_email = body.replace('src="', 'src="cid:').replace("src='", "src='cid:").replace('{{sig_name}}',
+                                                                                                     '{0}').replace(
+                '{{start_time}}', '{1}').replace('{{join_url}}', '{2}').replace('{{topic}}', '{3}').format(sig_name,
+                                                                                                           start_time,
+                                                                                                           join_url,
+                                                                                                           topic)
     if summary and not record:
-        body_of_email = email_template_with_agenda(sig_name, start_time, join_url, topic, summary)
+        with open('templates/template_with_summary_without_recordings.html') as fp:
+            body = fp.read()
+            body_of_email = body.replace('src="', 'src="cid:').replace("src='", "src='cid:").replace('{{sig_name}}',
+                                                                                                     '{0}').replace(
+                '{{start_time}}', '{1}').replace('{{join_url}}', '{2}').replace('{{topic}}', '{3}').replace(
+                '{{summary}}', '{4}').format(sig_name,
+                                             start_time,
+                                             join_url,
+                                             topic,
+                                             summary)
     if not summary and record:
-        body_of_email = record_email_template(sig_name, start_time, join_url, topic)
+        with open('templates/template_without_summary_with_recordings.html') as fp:
+            body = fp.read()
+            body_of_email = body.replace('src="', 'src="cid:').replace("src='", "src='cid:").replace('{{sig_name}}',
+                                                                                                     '{0}').replace(
+                '{{start_time}}', '{1}').replace('{{join_url}}', '{2}').replace('{{topic}}', '{3}').format(sig_name,
+                                                                                                           start_time,
+                                                                                                           join_url,
+                                                                                                           topic)
     if summary and record:
-        body_of_email = record_email_template_with_agenda(sig_name, start_time, join_url, topic, summary)
-
+        with open('templates/template_with_summary_with_recordings.html') as fp:
+            body = fp.read()
+            body_of_email = body.replace('src="', 'src="cid:').replace("src='", "src='cid:").replace('{{sig_name}}',
+                                                                                                     '{0}').replace(
+                '{{start_time}}', '{1}').replace('{{join_url}}', '{2}').replace('{{topic}}', '{3}').replace(
+                '{{summary}}', '{4}').format(sig_name,
+                                             start_time,
+                                             join_url,
+                                             topic,
+                                             summary)
     content = MIMEText(body_of_email, 'html', 'utf-8')
-    msg.attach(content)
+    msg.attach(content) 
+
+    # 添加图片
+    for file in os.listdir('templates/images'):
+        if os.path.join('images', file) in body_of_email:
+            f = open(os.path.join('templates', 'images', file), 'rb')
+            msgImage = MIMEImage(f.read())
+            f.close()
+            msgImage.add_header('Content-ID', '<{}>'.format(os.path.join('images', file)))
+            msg.attach(msgImage)
 
     # 添加邮件附件
     paths = enclosure_paths
