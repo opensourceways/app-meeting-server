@@ -93,6 +93,10 @@ class Command(BaseCommand):
                         maillist = html.xpath('//a[contains(@href, "@openeuler.org")]/text()')[0]
                 except IndexError:
                     maillist = 'dev@openeuler.org'
+            if html.xpath('//*[contains(text(), "maillist")]/a'):
+                maillist = html.xpath('//*[contains(text(), "maillist")]/a')[0].text
+            elif html.xpath('//*[contains(text(), "Mail")]/a'):
+                maillist = html.xpath('//*[contains(text(), "Mail")]/a')[0].text
             if not maillist:
                 maillist = 'dev@openeuler.org'
             sig.append(maillist)
