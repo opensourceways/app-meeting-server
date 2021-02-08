@@ -22,6 +22,13 @@ class Command(BaseCommand):
             sys.exit(1)
         t1 = time.time()
         self.logger.info('Starting to genegroup...')
+        mail_lists = []
+        headers = {
+            'Authorization': 'Basic b3BlbmV1bGVyc2VydmVyOm9wZW5ldWxlcnNlcnZlckAxMjM0'
+        }
+        r = requests.get('https://openeuler.org/api/mail/list', headers=headers)
+        if r.status_code == 200:
+            mail_lists = [x['fqdn_listname'] for x in r.json()['entries']]
         if os.path.exists('sigs.yaml'):
             os.remove('sigs.yaml')
         subprocess.call('wget https://gitee.com/openeuler/community/raw/master/sig/sigs.yaml', shell=True)
@@ -97,6 +104,8 @@ class Command(BaseCommand):
                 maillist = html.xpath('//*[contains(text(), "maillist")]/a')[0].text
             elif html.xpath('//*[contains(text(), "Mail")]/a'):
                 maillist = html.xpath('//*[contains(text(), "Mail")]/a')[0].text
+            if mail_lists and maillist and maillist.endswith('@openeuler.org') and maillist not in mail_lists:
+                maillist = 'dev@openeuler.org'
             if not maillist:
                 maillist = 'dev@openeuler.org'
             sig.append(maillist)
