@@ -617,3 +617,21 @@ class MyCollectionsView(GenericAPIView, ListModelMixin):
         collection_lst = Collect.objects.filter(user_id=user_id).values_list('meeting', flat=True)
         queryset = Meeting.objects.filter(is_delete=0, id__in=collection_lst).order_by('-date', 'start')
         return queryset
+
+
+class ParticipantsView(GenericAPIView, RetrieveModelMixin):
+    """查询会议的参会者"""
+    def get(self, request, *args, **kwargs):
+        mid = kwargs.get('mid')
+        try:
+            url = "https://api.zoom.us/v2/past_meetings/{}/participants".format(mid)
+            headers = {
+                "authorization": "Bearer {}".format(settings.ZOOM_TOKEN)}
+            r = requests.get(url, headers=headers)
+            if r.status_code == 200:
+                return JsonResponse({'total_records': r.json()['total_records'], 'participants': r.json()['participants']})
+            else:
+                return JsonResponse(r.json())
+        except Exception as e:
+            logger.error(e)
+            return JsonResponse({'msg': e})
