@@ -2,7 +2,7 @@ from django.urls import path
 from meetings.views import LoginView, GroupView, GroupsView, MeetingView, MeetingsView, UsersExcludeView, UserView, \
     GroupUserAddView, MeetingDelView, MeetingsWeeklyView, MeetingsDailyView, \
     UsersIncludeView, UserGroupView, GroupUserDelView, UserInfoView, SigsView, MeetingsDataView, SigMeetingsDataView, \
-    MyMeetingsView, AllMeetingsView, CollectView, CollectDelView, MyCollectionsView
+    MyMeetingsView, AllMeetingsView, CollectView, CollectDelView, MyCollectionsView, ParticipantsView
 
 urlpatterns = [
     path('login/', LoginView.as_view()),  # 登陆
@@ -27,5 +27,6 @@ urlpatterns = [
     path('allmeetings/', AllMeetingsView.as_view()),  # 查询所有会议
     path('collect/', CollectView.as_view()),  # 添加收藏
     path('collect/<int:pk>/', CollectDelView.as_view()),  # 取消收藏
-    path('collections/', MyCollectionsView.as_view())  # 我收藏的会议 
+    path('collections/', MyCollectionsView.as_view()),  # 我收藏的会议
+    path('participants/<int:mid>/', ParticipantsView.as_view())  # 查询会议的参会者
 ]
