@@ -10,6 +10,7 @@ from lxml.etree import HTML
 from meetings.models import Group
 from django.core.management.base import BaseCommand
 from django.conf import settings
+from django.db import connection
 
 
 class Command(BaseCommand):
@@ -169,4 +170,21 @@ class Command(BaseCommand):
                 self.logger.info(sig)
         t4 = time.time()
         self.logger.info('Has updated database, wasted time: {}'.format(t4 - t3))
+        db_sigs = list(Group.objects.all().values_list('group_name', flat=True))
+        for sig in [x['name'] for x in sigs]:
+            db_sigs.remove(sig)
+        if db_sigs:
+            try:
+                cursor = connection.cursor()
+                self.logger.info('Find useless data in database, use cursor to connect database.')
+                cursor.execute('set foreign_key_checks=0')
+                self.logger.info('Turn off foreign_key_check.')
+                for sig in db_sigs:
+                    Group.objects.filter(group_name=sig).delete()
+                    self.logger.info(
+                        'Sig {} had been removed from database because it does not exist in sigs.yaml.'.format(sig))
+                cursor.execute('set foreign_key_checks=1')
+                self.logger.info('Turn on foreign_key_checks.')
+            except Exception as e:
+                self.logger.error(e)
         self.logger.info('All done. Wasted time: {}'.format(t4 - t1))
