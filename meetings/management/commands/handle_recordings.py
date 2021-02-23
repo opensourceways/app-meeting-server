@@ -43,7 +43,7 @@ def get_recordings(mid):
     }
     response = requests.get(url, headers=headers)
     if response.status_code != 200:
-        print('mid: {}, get recordings:'.format(mid), response.status_code, response.json()['message'])
+        logger.error('mid: {}, get recordings: {} {}'.format(mid, response.status_code, response.json()['message']))
         return
     return response.json()
 
@@ -60,7 +60,7 @@ def get_participants(mid):
     }
     response = requests.get(url, headers=headers)
     if response.status_code != 200:
-        logger.error('mid: {}, get participants:'.format(mid), response.status_code, response.json()['message'])
+        logger.error('mid: {}, get participants {} {}:'.format(mid, response.status_code, response.json()['message']))
         return
     return response.json()['participants']
 
