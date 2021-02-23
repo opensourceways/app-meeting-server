@@ -20,7 +20,10 @@ class Command(BaseCommand):
         meeting_ids = Video.objects.all().values_list('mid', flat=True)
         past_meetings = Meeting.objects.filter(Q(date__gt=str(datetime.datetime.now() - datetime.timedelta(days=2))) &
                                                Q(date__lte=datetime.datetime.now().strftime('%Y-%m-%d')))
-        recent_mids = [x for x in meeting_ids if x in past_meetings.values_list('mid', flat=True)]
+        recent_mids = [x for x in meeting_ids if x in list(past_meetings.values_list('mid', flat=True))]
+        logger.info('meeting_ids: {}'.format(meeting_ids))
+        logger.info('mids of past_meetings: {}'.format(list(past_meetings.values_list('mid', flat=True))))
+        logger.info('recent_mids: {}'.format(recent_mids))
         pool = ThreadPool()
         pool.map(run, recent_mids)
         pool.close()
@@ -40,7 +43,7 @@ def get_recordings(mid):
     }
     response = requests.get(url, headers=headers)
     if response.status_code != 200:
-        print('mid: {}, get recordings:'.format(mid), response.status_code, response.json()['message'])
+        logger.error('mid: {}, get recordings: {} {}'.format(mid, response.status_code, response.json()['message']))
         return
     return response.json()
 
@@ -57,7 +60,7 @@ def get_participants(mid):
     }
     response = requests.get(url, headers=headers)
     if response.status_code != 200:
-        logger.error('mid: {}, get participants:'.format(mid), response.status_code, response.json()['message'])
+        logger.error('mid: {}, get participants {} {}:'.format(mid, response.status_code, response.json()['message']))
         return
     return response.json()['participants']
 
