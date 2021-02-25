@@ -21,7 +21,7 @@ class Command(BaseCommand):
         past_meetings = Meeting.objects.filter(Q(date__gt=str(datetime.datetime.now() - datetime.timedelta(days=2))) &
                                                Q(date__lte=datetime.datetime.now().strftime('%Y-%m-%d')))
         recent_mids = [x for x in meeting_ids if x in list(past_meetings.values_list('mid', flat=True))]
-        logger.info('meeting_ids: {}'.format(meeting_ids))
+        logger.info('meeting_ids: {}'.format(list(meeting_ids)))
         logger.info('mids of past_meetings: {}'.format(list(past_meetings.values_list('mid', flat=True))))
         logger.info('recent_mids: {}'.format(recent_mids))
         pool = ThreadPool()
@@ -33,19 +33,31 @@ class Command(BaseCommand):
 
 def get_recordings(mid):
     """
-    查询一个会议的录像信息并返回
+    查询一个host下昨日至今日(默认)的所有录像
     :param mid: 会议ID
     :return: the json-encoded content of a response or none
     """
-    url = 'https://api.zoom.us/v2/meetings/{}/recordings'.format(mid)
+    host_id = Meeting.objects.get(mid=mid).host_id
+    url = 'https://api.zoom.us/v2/users/{}/recordings'.format(host_id)
     headers = {
         'authorization': 'Bearer {}'.format(settings.ZOOM_TOKEN)
     }
     response = requests.get(url, headers=headers)
     if response.status_code != 200:
-        logger.error('mid: {}, get recordings: {} {}'.format(mid, response.status_code, response.json()['message']))
+        logger.error('get recordings: {} {}'.format(response.status_code, response.json()['message']))
         return
-    return response.json()
+    mids = [x['id'] for x in response.json()['meetings']]
+    if mids.count(int(mid)) == 0:
+        logger.info('meeting {}: no recordings yet'.format(mid))
+        return
+    if mids.count(int(mid)) == 1:
+        record = list(filter(lambda x:x if x['id'] == mid else None, response.json()['meetings']))[0]
+        return record
+    if mids.count(int(mid)) > 1:
+        records = list(filter(lambda x: x if x['id'] == int(mid) else None, response.json()['meetings']))
+        max_size = max([x['total_size'] for x in records])
+        record = list(filter(lambda x: x if x['total_size'] == max_size else None, response.json()['meetings']))[0]
+        return record
 
 
 def get_participants(mid):
@@ -130,7 +142,8 @@ def download_upload_recordings(start, end, zoom_download_url, mid, total_size, v
         # 若下载的录像的大小和查询到的total_size相等，则继续
         download_file_size = os.path.getsize(filename)
         logger.info('meeting {}: 下载的文件大小为{}'.format(mid, download_file_size))
-        if download_file_size == total_size:
+        # if download_file_size == total_size:
+        if download_file_size >= int(total_size * 0.9):
             topic = video.topic
             agenda = video.agenda
             community = video.community
@@ -152,7 +165,7 @@ def download_upload_recordings(start, end, zoom_download_url, mid, total_size, v
                 "record_start": start,
                 "record_end": end,
                 "download_url": download_url,
-                "total_size": total_size,
+                "total_size": download_file_size,
                 "attenders": attenders
             }
             # 上传视频
@@ -204,11 +217,11 @@ def download_upload_recordings(start, end, zoom_download_url, mid, total_size, v
                                     'meeting {}: 移除临时文件{}'.format(mid, filename.replace('.mp4', '.png')))
                                 return topic, filename
                             except Exception as e4:
-                                logger.error('meeting {}: fail to update database!'.format(mid), e4)
+                                logger.error('meeting {}: fail to update database! {}'.format(mid, e4))
                 except KeyError as e3:
-                    logger.error('meeting {}: fail to upload file!'.format(mid), e3)
+                    logger.error('meeting {}: fail to upload file! {}'.format(mid, e3))
             except Exception as e2:
-                logger.error('meeting {}: upload file error!'.format(mid), e2)
+                logger.error('meeting {}: upload file error! {}'.format(mid, e2))
         else:
             # 否则，删除刚下载的文件
             os.remove(filename)
@@ -229,52 +242,52 @@ def run(mid):
     if recordings:
         total_size = recordings['total_size']
         logger.info('meeting {}: 录像文件的总大小为{}'.format(mid, total_size))
-        # 连接obs服务，实例化ObsClient
-        access_key_id = os.getenv('ACCESS_KEY_ID', '')
-        secret_access_key = os.getenv('SECRET_ACCESS_KEY', '')
-        endpoint = os.getenv('OBS_ENDPOINT', '')
-        bucketName = os.getenv('OBS_BUCKETNAME', '')
-        if not (access_key_id and secret_access_key and endpoint and bucketName):
-            logger.error('losing required arguments for ObsClient')
-            return
-        try:
-            obs_client = ObsClient(access_key_id=access_key_id,
-                                   secret_access_key=secret_access_key,
-                                   server='https://{}'.format(endpoint))
-            objs = obs_client.listObjects(bucketName=bucketName)
-            # 预备文件上传路径
-            start = recordings['recording_files'][0]['recording_start']
-            month = datetime.datetime.strptime(start.replace('T', ' ').replace('Z', ''), "%Y-%m-%d %H:%M:%S").strftime(
-                "%b").lower()
-            group_name = video.group_name
-            video_name = mid + '.mp4'
-            object_key = 'openeuler/{}/{}/{}/{}'.format(group_name, month, mid, video_name)
-            logger.info('meeting {}: object_key is {}'.format(mid, object_key))
-            # 收集录像信息待用
-            end = recordings['recording_files'][0]['recording_end']
-            zoom_download_url = recordings['recording_files'][0]['download_url']
-            if not objs['body']['contents']:
-                logger.info('meeting {}: OBS无存储对象，开始下载视频'.format(mid))
-                topic, filename = download_upload_recordings(start, end, zoom_download_url, mid, total_size, video,
-                                                             endpoint, object_key,
-                                                             group_name, obs_client)
-                return {"mid": mid, "topic": topic, "filename": filename}
-            else:
-                key_size_map = {x['key']: x['size'] for x in objs['body']['contents']}
-                if object_key not in key_size_map.keys():
-                    logger.info('meeting {}: OBS存储服务中无此对象，开始下载视频'.format(mid))
-                    topic, filename = download_upload_recordings(start, end, zoom_download_url, mid, total_size, video,
+        # 如果文件过小，则视为无效录像
+        if total_size < 1024 * 1024:
+            logger.info('文件过小，不予操作')
+        else:
+            # 连接obs服务，实例化ObsClient
+            access_key_id = os.getenv('ACCESS_KEY_ID', '')
+            secret_access_key = os.getenv('SECRET_ACCESS_KEY', '')
+            endpoint = os.getenv('OBS_ENDPOINT', '')
+            bucketName = os.getenv('OBS_BUCKETNAME', '')
+            if not (access_key_id and secret_access_key and endpoint and bucketName):
+                logger.error('losing required arguments for ObsClient')
+                return
+            try:
+                obs_client = ObsClient(access_key_id=access_key_id,
+                                       secret_access_key=secret_access_key,
+                                       server='https://{}'.format(endpoint))
+                objs = obs_client.listObjects(bucketName=bucketName)
+                # 预备文件上传路径
+                start = recordings['recording_files'][0]['recording_start']
+                month = datetime.datetime.strptime(start.replace('T', ' ').replace('Z', ''), "%Y-%m-%d %H:%M:%S").strftime(
+                    "%b").lower()
+                group_name = video.group_name
+                video_name = mid + '.mp4'
+                object_key = 'openeuler/{}/{}/{}/{}'.format(group_name, month, mid, video_name)
+                logger.info('meeting {}: object_key is {}'.format(mid, object_key))
+                # 收集录像信息待用
+                end = recordings['recording_files'][0]['recording_end']
+                zoom_download_url = list(filter(lambda x: x if x['file_extension'] == 'MP4' else None, recordings['recording_files']))[0]['download_url']
+                if not objs['body']['contents']:
+                    logger.info('meeting {}: OBS无存储对象，开始下载视频'.format(mid))
+                    download_upload_recordings(start, end, zoom_download_url, mid, total_size, video,
                                                                  endpoint, object_key,
                                                                  group_name, obs_client)
-                    return {"mid": mid, "topic": topic, "filename": filename}
-                elif object_key in key_size_map.keys() and key_size_map[object_key] >= total_size:
-                    logger.info('meeting {}: OBS存储服务中已存在该对象且无需替换'.format(mid))
-                    return
                 else:
-                    logger.info('meeting {}: OBS存储服务中该对象需要替换，开始下载视频'.format(mid))
-                    topic, filename = download_upload_recordings(start, end, zoom_download_url, mid, total_size, video,
-                                                                 endpoint,
-                                                                 object_key, group_name, obs_client)
-                    return {"mid": mid, "topic": topic, "filename": filename}
-        except Exception as e:
-            logger.error(e)
+                    key_size_map = {x['key']: x['size'] for x in objs['body']['contents']}
+                    if object_key not in key_size_map.keys():
+                        logger.info('meeting {}: OBS存储服务中无此对象，开始下载视频'.format(mid))
+                        download_upload_recordings(start, end, zoom_download_url, mid, total_size, video,
+                                                                     endpoint, object_key,
+                                                                     group_name, obs_client)
+                    elif object_key in key_size_map.keys() and key_size_map[object_key] >= total_size:
+                        logger.info('meeting {}: OBS存储服务中已存在该对象且无需替换'.format(mid))
+                    else:
+                        logger.info('meeting {}: OBS存储服务中该对象需要替换，开始下载视频'.format(mid))
+                        download_upload_recordings(start, end, zoom_download_url, mid, total_size, video,
+                                                                     endpoint,
+                                                                     object_key, group_name, obs_client)
+            except Exception as e:
+                logger.error(e)
