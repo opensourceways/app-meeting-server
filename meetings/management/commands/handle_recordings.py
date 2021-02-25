@@ -139,11 +139,10 @@ def download_upload_recordings(start, end, zoom_download_url, mid, total_size, v
     print()
     logger.info('meeting {}: 从OBS下载视频，本地保存为{}'.format(mid, filename))
     try:
-        # 若下载的录像的大小和查询到的total_size相等，则继续
+        # 若下载录像的大小和total_size相等，则继续
         download_file_size = os.path.getsize(filename)
         logger.info('meeting {}: 下载的文件大小为{}'.format(mid, download_file_size))
-        # if download_file_size == total_size:
-        if download_file_size >= int(total_size * 0.9):
+        if download_file_size == total_size:
             topic = video.topic
             agenda = video.agenda
             community = video.community
@@ -240,7 +239,7 @@ def run(mid):
     # 查询会议的录像信息
     recordings = get_recordings(mid)
     if recordings:
-        total_size = recordings['total_size']
+        total_size = list(filter(lambda x: x if x['file_extension'] == 'MP4' else None, recordings['recording_files']))[0]['file_size']
         logger.info('meeting {}: 录像文件的总大小为{}'.format(mid, total_size))
         # 如果文件过小，则视为无效录像
         if total_size < 1024 * 1024:
