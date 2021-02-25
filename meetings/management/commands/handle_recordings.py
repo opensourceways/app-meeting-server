@@ -42,7 +42,11 @@ def get_recordings(mid):
     headers = {
         'authorization': 'Bearer {}'.format(settings.ZOOM_TOKEN)
     }
-    response = requests.get(url, headers=headers)
+    params = {
+        'from': (datetime.datetime.now() - datetime.timedelta(days=7)).strftime("%Y-%m-%d"),
+        'page_size': 50
+    }
+    response = requests.get(url, headers=headers, params=params)
     if response.status_code != 200:
         logger.error('get recordings: {} {}'.format(response.status_code, response.json()['message']))
         return
