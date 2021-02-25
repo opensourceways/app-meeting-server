@@ -18,7 +18,7 @@ logger = logging.getLogger('log')
 class Command(BaseCommand):
     def handle(self, *args, **options):
         meeting_ids = Video.objects.all().values_list('mid', flat=True)
-        past_meetings = Meeting.objects.filter(Q(date__gt=str(datetime.datetime.now() - datetime.timedelta(days=2))) &
+        past_meetings = Meeting.objects.filter(Q(date__gt=str(datetime.datetime.now() - datetime.timedelta(days=8))) &
                                                Q(date__lte=datetime.datetime.now().strftime('%Y-%m-%d')))
         recent_mids = [x for x in meeting_ids if x in list(past_meetings.values_list('mid', flat=True))]
         logger.info('meeting_ids: {}'.format(list(meeting_ids)))
