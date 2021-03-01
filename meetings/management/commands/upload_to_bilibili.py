@@ -1,3 +1,4 @@
+import datetime
 import logging
 import os
 import sys
@@ -68,7 +69,11 @@ class Command(BaseCommand):
                                     topic = metadata_dict['meeting_topic']
                                     mid = metadata_dict['meeting_id']
                                     community = metadata_dict['community']
-                                    res = upload(topic, videoFile, imageFile, mid, community)
+                                    record_start = metadata_dict['record_start']
+                                    date = (datetime.datetime.strptime(record_start.replace('T', ' ').replace('Z', ''),
+                                                                       "%Y-%m-%d %H:%M:%S") + datetime.timedelta(
+                                        hours=8)).strftime('%Y-%m-%d')
+                                    res = upload(topic, date, videoFile, imageFile, mid, community)
                                     try:
                                         if not Record.objects.filter(mid=mid, platform='bilibili'):
                                             Record.objects.create(mid=mid, platform='bilibili')
@@ -78,7 +83,6 @@ class Command(BaseCommand):
                                     bvid = res['bvid']
                                     sig = metadata_dict['sig']
                                     agenda = metadata_dict['agenda'] if 'agenda' in metadata_dict else ''
-                                    record_start = metadata_dict['record_start']
                                     record_end = metadata_dict['record_end']
                                     download_url = metadata_dict['download_url']
                                     total_size = metadata_dict['total_size']
@@ -121,7 +125,7 @@ class Command(BaseCommand):
                     logger.error(traceback.format_exc())
 
 
-def upload(topic, videoFile, imageFile, mid, community):
+def upload(topic, date, videoFile, imageFile, mid, community):
     """上传视频到b站"""
     sessdata = os.getenv('SESSDATA', '')
     bili_jct = os.getenv('BILI_JCT', '')
@@ -150,7 +154,7 @@ def upload(topic, videoFile, imageFile, mid, community):
         },
         "tag": "{}, community, recordings, 会议录像".format(community),
         "tid": 124,
-        "title": topic,
+        "title": topic + " (" + date + ")",
         "videos": [
             {
                 "desc": "recordings download from OBS",

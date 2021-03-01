@@ -181,9 +181,9 @@ def download_upload_recordings(start, end, zoom_download_url, mid, total_size, v
                     if res['status'] == 200:
                         logger.info('meeting {}: OBS视频上传成功'.format(mid, filename))
                         # 生成封面
-                        date = datetime.datetime.strptime(start.replace('T', ' ').replace('Z', ''),
-                                                          "%Y-%m-%d %H:%M:%S").strftime(
-                            '%Y-%m-%d')
+                        date = (datetime.datetime.strptime(start.replace('T', ' ').replace('Z', ''),
+                                                           "%Y-%m-%d %H:%M:%S") + datetime.timedelta(
+                            hours=8)).strftime('%Y-%m-%d')
                         start_time = (datetime.datetime.strptime(start.replace('T', ' ').replace('Z', ''),
                                                                  "%Y-%m-%d %H:%M:%S") + datetime.timedelta(
                             hours=8)).strftime('%H:%M')
