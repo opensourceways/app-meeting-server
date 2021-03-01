@@ -18,8 +18,9 @@ logger = logging.getLogger('log')
 class Command(BaseCommand):
     def handle(self, *args, **options):
         meeting_ids = Video.objects.all().values_list('mid', flat=True)
-        past_meetings = Meeting.objects.filter(Q(date__gt=str(datetime.datetime.now() - datetime.timedelta(days=8))) &
-                                               Q(date__lte=datetime.datetime.now().strftime('%Y-%m-%d')))
+        past_meetings = Meeting.objects.filter(is_delete=0).filter(
+            Q(date__gt=str(datetime.datetime.now() - datetime.timedelta(days=2))) &
+            Q(date__lte=datetime.datetime.now().strftime('%Y-%m-%d')))
         recent_mids = [x for x in meeting_ids if x in list(past_meetings.values_list('mid', flat=True))]
         logger.info('meeting_ids: {}'.format(list(meeting_ids)))
         logger.info('mids of past_meetings: {}'.format(list(past_meetings.values_list('mid', flat=True))))
@@ -55,7 +56,7 @@ def get_recordings(mid):
         logger.info('meeting {}: no recordings yet'.format(mid))
         return
     if mids.count(int(mid)) == 1:
-        record = list(filter(lambda x:x if x['id'] == mid else None, response.json()['meetings']))[0]
+        record = list(filter(lambda x:x if x['id'] == int(mid) else None, response.json()['meetings']))[0]
         return record
     if mids.count(int(mid)) > 1:
         records = list(filter(lambda x: x if x['id'] == int(mid) else None, response.json()['meetings']))
