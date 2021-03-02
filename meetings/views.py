@@ -427,14 +427,14 @@ class MeetingsView(GenericAPIView, CreateModelMixin):
         if start >= end:
             logger.warning('The end time must be greater than the start time.')
             return JsonResponse({'code': 1001, 'message': '请输入正确的结束时间'})
-        start_search = datetime.datetime.strftime((datetime.datetime.strptime(start, '%H:%M') - datetime.timedelta(minutes=60)),
+        start_search = datetime.datetime.strftime((datetime.datetime.strptime(start, '%H:%M') - datetime.timedelta(minutes=30)),
                                                           '%H:%M')
-        end_search = datetime.datetime.strftime((datetime.datetime.strptime(end, '%H:%M') + datetime.timedelta(minutes=60)),
+        end_search = datetime.datetime.strftime((datetime.datetime.strptime(end, '%H:%M') + datetime.timedelta(minutes=30)),
                                                         '%H:%M')
         # 查询待创建的会议与现有的预定会议是否冲突
         unavailable_host_id = []
         available_host_id = []
-        meetings = Meeting.objects.filter(is_delete=0, date=date, start__gte=start_search, end__lte=end_search).values()
+        meetings = Meeting.objects.filter(is_delete=0, date=date, end__gt=start_search, start__lt=end_search).values()
         try:
             for meeting in meetings:
                 host_id = meeting['host_id']
