@@ -248,7 +248,7 @@ def run(mid):
         logger.info('meeting {}: 录像文件的总大小为{}'.format(mid, total_size))
         # 如果文件过小，则视为无效录像
         if total_size < 1024 * 1024:
-            logger.info('文件过小，不予操作')
+            logger.info('meeting {}: 文件过小，不予操作'.format(mid))
         else:
             # 连接obs服务，实例化ObsClient
             access_key_id = os.getenv('ACCESS_KEY_ID', '')
