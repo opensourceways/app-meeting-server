@@ -32,7 +32,9 @@ APP_CONF = {
 
 MEETING_HOSTS = {
     os.getenv('HOST_GENEDNA', ''): 'genedna@hey.com',
-    os.getenv('HOST_TOMMYLIKE', ''): 'tommylikehu@gmail.com'
+    os.getenv('HOST_TOMMYLIKE', ''): 'tommylikehu@gmail.com',
+    os.getenv('HOST_GEORGE', ''): 'caozhi1214@gmail.com',
+    os.getenv('HOST_NIC', ''): 'nicliuqi@gmail.com'
 }
 
 # SECURITY WARNING: don't run with debug turned on in production!
