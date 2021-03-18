@@ -31,8 +31,9 @@ class Command(BaseCommand):
                                secret_access_key=secret_access_key,
                                server='https://{}'.format(endpoint))
         bili_mids = [int(x.mid) for x in Record.objects.filter(platform='bilibili', url__isnull=True)]
-        logger.info('所有上传B站的会议的mid: {}'.format(bili_mids))
-        for mid in bili_mids:
+        logger.info('所有还未上传B站的会议的mid: {}'.format(bili_mids))
+        all_bili_mids = [int(x.mid) for x in Record.objects.filter(platform='bilibili')]
+        for mid in all_bili_mids:
             obs_record = Record.objects.get(mid=mid, platform='obs')
             url = obs_record.url
             object_key = url.split('/', 3)[-1]
@@ -48,4 +49,4 @@ class Command(BaseCommand):
                 else:
                     bili_url = 'https://www.bilibili.com/{}'.format(metadata_dict['bvid'])
                     Record.objects.filter(mid=mid, platform='bilibili').update(url=bili_url)
-                    logger.info('meeting {}: B站已过审，更新数据库'.format(mid))
+                    logger.info('meeting {}: B站已过审，刷新播放地址'.format(mid))
