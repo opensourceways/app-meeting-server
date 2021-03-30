@@ -5,8 +5,8 @@ from django.contrib.auth.hashers import make_password
 from rest_framework import serializers
 from rest_framework.serializers import ModelSerializer
 from rest_framework_simplejwt.tokens import RefreshToken
-from meetings.models import Collect, Group, User, Meeting, GroupUser, Record
-
+from meetings.models import Collect, Group, User, Meeting, GroupUser, Record, Activity, ActivityCollect, \
+    ActivityRegister, Feedback
 
 logger = logging.getLogger('log')
 
@@ -99,7 +99,8 @@ class MeetingListSerializer(ModelSerializer):
 
     class Meta:
         model = Meeting
-        fields = ['id', 'collection_id', 'user_id', 'group_id', 'topic', 'sponsor', 'group_name', 'date', 'start', 'end', 'agenda', 'etherpad', 'mid', 'join_url', 'video_url']
+        fields = ['id', 'collection_id', 'user_id', 'group_id', 'topic', 'sponsor', 'group_name', 'date', 'start',
+                  'end', 'agenda', 'etherpad', 'mid', 'join_url', 'video_url']
 
     def get_collection_id(self, obj):
         user = None
@@ -178,6 +179,9 @@ class LoginSerializer(serializers.ModelSerializer):
         refresh = RefreshToken.for_user(instance)
         data['user_id'] = instance.id
         data['access'] = str(refresh.access_token)
+        data['level'] = instance.level
+        data['gitee_name'] = instance.gitee_name
+        data['activity_level'] = instance.activity_level
         return data
 
 
@@ -199,7 +203,7 @@ class UserGroupSerializer(ModelSerializer):
 class UserInfoSerializer(ModelSerializer):
     class Meta:
         model = User
-        fields = ['level', 'gitee_name']
+        fields = ['level', 'gitee_name', 'activity_level']
 
 
 class GroupUserSerializer(ModelSerializer):
@@ -213,7 +217,6 @@ class GroupUserSerializer(ModelSerializer):
 
 
 class SigsSerializer(ModelSerializer):
-
     class Meta:
         model = Group
         fields = ['id', 'group_name', 'home_page', 'maillist', 'irc', 'owners']
@@ -237,3 +240,101 @@ class AllMeetingsSerializer(ModelSerializer):
     class Meta:
         model = Meeting
         fields = '__all__'
+
+
+class SponsorSerializer(ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['id', 'nickname', 'avatar', 'gitee_name', 'enterprise']
+
+
+class SponsorInfoSerializer(ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['id', 'gitee_name', 'enterprise']
+
+
+class ActivitySerializer(ModelSerializer):
+    class Meta:
+        model = Activity
+        fields = ['id', 'title', 'activity_type', 'poster', 'synopsis']
+
+
+class ActivitiesSerializer(ModelSerializer):
+    collection_id = serializers.SerializerMethodField()
+    register_id = serializers.SerializerMethodField()
+    register_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Activity
+        fields = ['id', 'collection_id', 'register_id', 'title', 'date', 'activity_type', 'synopsis', 'live_address',
+                  'address', 'detail_address', 'longitude', 'latitude', 'schedules', 'poster', 'status', 'user',
+                  'enterprise', 'register_count']
+
+    def get_collection_id(self, obj):
+        user = None
+        request = self.context.get("request")
+        if request and hasattr(request, "user"):
+            user = request.user
+        try:
+            return ActivityCollect.objects.filter(user_id=user.pk, activity_id=obj.id).values()[0]['id']
+        except IndexError:
+            return
+
+    def get_register_id(self, obj):
+        user = None
+        request = self.context.get("request")
+        if request and hasattr(request, "user"):
+            user = request.user
+        try:
+            return ActivityRegister.objects.filter(user_id=user.pk, activity_id=obj.id).values()[0]['id']
+        except IndexError:
+            return
+
+    def get_register_count(self, obj):
+        activity_id = obj.id
+        return len(ActivityRegister.objects.filter(activity_id=activity_id).values())
+
+
+class ActivityRetrieveSerializer(ActivitiesSerializer):
+    class Meta:
+        model = Activity
+        fields = ['id', 'collection_id', 'register_id', 'title', 'date', 'activity_type', 'synopsis', 'live_address',
+                  'address', 'detail_address', 'longitude', 'latitude', 'schedules', 'poster', 'status', 'user',
+                  'enterprise', 'register_count', 'wx_code']
+
+
+class ActivityUpdateSerializer(ModelSerializer):
+    class Meta:
+        model = Activity
+        fields = ['schedules']
+
+
+class ActivityDraftUpdateSerializer(ModelSerializer):
+    class Meta:
+        model = Activity
+        fields = ['title', 'date', 'activity_type', 'poster', 'schedules']
+
+
+class ActivityCollectSerializer(ModelSerializer):
+    class Meta:
+        model = ActivityCollect
+        fields = ['activity']
+
+
+class ActivityRegisterSerializer(ModelSerializer):
+    class Meta:
+        model = ActivityRegister
+        fields = ['activity']
+
+
+class ApplicantInfoSerializer(ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['id', 'name', 'telephone', 'email', 'company', 'profession', 'gitee_name']
+
+
+class FeedbackSerializer(ModelSerializer):
+    class Meta:
+        model = Feedback
+        fields = ['feedback_type', 'feedback_email', 'feedback_content']

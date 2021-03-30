@@ -104,3 +104,59 @@ def record_email_template_with_agenda(sig_name, start_time, join_url, topic, sum
     </html>
     """.format(sig_name, start_time, join_url, topic, summary)
     return body
+
+
+def feedback_email_template(feedback_type, feedback_email, feedback_content):
+    body = """
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <title></title>
+    </head>
+    <body>
+        <p>反馈类型：{0}</p>
+        <p>反馈者邮箱：{1}</p>
+        <p>反馈内容：{2}</p>
+    </body>
+    </html>
+    """.format(feedback_type, feedback_email, feedback_content)
+    return body
+
+
+def reply_email_template():
+    body = """
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <title></title>
+    </head>
+    <body>
+        <p>您好!</p>
+        <p>感谢您给 openEuler 小程序提供的宝贵建议，我们将尽快处理此问题。为您提供良好的社区体验是我们不懈追求的目标。</p>
+        <p style="text-align: right">openEuler 团队</p>
+        <br/>
+        <p>Hello.</p>
+        <p>Thank you for your suggestion on the openEuler applet. We will address this issue as soon as possible. It is our unremitting goal to provide you with a good community experience.</p>
+        <p>openEuler Team</p>
+    </body>
+    </html>
+    """
+    return body
+
+
+def applicants_info_template():
+    body = """
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <title></title>
+    </head>
+    <body>
+        <p>详细内容请查看csv附件</p>
+    </body>
+    </html>
+    """
+    return body
