@@ -29,7 +29,7 @@ def gene_code_img(appid, secret, activity_id):
     wx_token = get_token(appid, secret)
     url = 'https://api.weixin.qq.com/wxa/getwxacodeunlimit?access_token={}'.format(wx_token)
     data = {
-        "scene": activity_id
+        "scene": activity_id,
         "page": "package-events/events/event-detail"
     }
     res = requests.post(url, data=json.dumps(data))
