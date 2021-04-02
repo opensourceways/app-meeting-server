@@ -70,6 +70,7 @@ class Command(BaseCommand):
                                     mid = metadata_dict['meeting_id']
                                     community = metadata_dict['community']
                                     record_start = metadata_dict['record_start']
+                                    sig = metadata_dict['sig']
                                     date = (datetime.datetime.strptime(record_start.replace('T', ' ').replace('Z', ''),
                                                                        "%Y-%m-%d %H:%M:%S") + datetime.timedelta(
                                         hours=8)).strftime('%Y-%m-%d')
@@ -81,7 +82,6 @@ class Command(BaseCommand):
                                         logger.error(e)
                                     # 修改metadata
                                     bvid = res['bvid']
-                                    sig = metadata_dict['sig']
                                     agenda = metadata_dict['agenda'] if 'agenda' in metadata_dict else ''
                                     record_end = metadata_dict['record_end']
                                     download_url = metadata_dict['download_url']
