@@ -40,7 +40,7 @@ class Command(BaseCommand):
             # 获取对象的metadata
             metadata = obs_client.getObjectMetadata(bucketName, object_key)
             metadata_dict = {x: y for x, y in metadata['header']}
-            if not metadata_dict['bvid']:
+            if 'bvid' not in metadata_dict.keys():
                 logger.info('meeting {}: 未上传B站，跳过'.format(mid))
             else:
                 logger.info('meeting {}: bvid为{}'.format(mid, metadata_dict['bvid']))
