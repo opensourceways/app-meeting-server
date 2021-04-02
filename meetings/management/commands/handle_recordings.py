@@ -19,7 +19,7 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         meeting_ids = Video.objects.all().values_list('mid', flat=True)
         past_meetings = Meeting.objects.filter(is_delete=0).filter(
-            Q(date__gt=str(datetime.datetime.now() - datetime.timedelta(days=2))) &
+            Q(date__gt=str(datetime.datetime.now() - datetime.timedelta(days=7))) &
             Q(date__lte=datetime.datetime.now().strftime('%Y-%m-%d')))
         recent_mids = [x for x in meeting_ids if x in list(past_meetings.values_list('mid', flat=True))]
         logger.info('meeting_ids: {}'.format(list(meeting_ids)))
@@ -244,10 +244,19 @@ def run(mid):
     # 查询会议的录像信息
     recordings = get_recordings(mid)
     if recordings:
-        total_size = list(filter(lambda x: x if x['file_extension'] == 'MP4' else None, recordings['recording_files']))[0]['file_size']
+        recordings_list = list(filter(lambda x: x if x['file_extension'] == 'MP4' else None, recordings['recording_files']))
+        if len(recordings_list) == 0:
+            logger.info('meeting {}: 正在录制中'.format(mid))
+            return
+        if len(recordings_list) > 1:
+            max_size = max([x['file_size'] for x in recordings_list])
+            for recording in recordings_list:
+                if recording['file_size'] != max_size:
+                    recordings_list.remove(recording)
+        total_size = recordings_list[0]['file_size']
         logger.info('meeting {}: 录像文件的总大小为{}'.format(mid, total_size))
         # 如果文件过小，则视为无效录像
-        if total_size < 1024 * 1024:
+        if total_size < 1024 * 1024 * 10:
             logger.info('meeting {}: 文件过小，不予操作'.format(mid))
         else:
             # 连接obs服务，实例化ObsClient
@@ -264,7 +273,7 @@ def run(mid):
                                        server='https://{}'.format(endpoint))
                 objs = obs_client.listObjects(bucketName=bucketName)
                 # 预备文件上传路径
-                start = recordings['recording_files'][0]['recording_start']
+                start = recordings_list[0]['recording_start']
                 month = datetime.datetime.strptime(start.replace('T', ' ').replace('Z', ''), "%Y-%m-%d %H:%M:%S").strftime(
                     "%b").lower()
                 group_name = video.group_name
@@ -272,8 +281,8 @@ def run(mid):
                 object_key = 'openeuler/{}/{}/{}/{}'.format(group_name, month, mid, video_name)
                 logger.info('meeting {}: object_key is {}'.format(mid, object_key))
                 # 收集录像信息待用
-                end = recordings['recording_files'][0]['recording_end']
-                zoom_download_url = list(filter(lambda x: x if x['file_extension'] == 'MP4' else None, recordings['recording_files']))[0]['download_url']
+                end = recordings_list[0]['recording_end']
+                zoom_download_url = recordings_list[0]['download_url']
                 if not objs['body']['contents']:
                     logger.info('meeting {}: OBS无存储对象，开始下载视频'.format(mid))
                     download_upload_recordings(start, end, zoom_download_url, mid, total_size, video,

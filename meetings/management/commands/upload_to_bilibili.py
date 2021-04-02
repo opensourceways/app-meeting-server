@@ -73,7 +73,7 @@ class Command(BaseCommand):
                                     date = (datetime.datetime.strptime(record_start.replace('T', ' ').replace('Z', ''),
                                                                        "%Y-%m-%d %H:%M:%S") + datetime.timedelta(
                                         hours=8)).strftime('%Y-%m-%d')
-                                    res = upload(topic, date, videoFile, imageFile, mid, community)
+                                    res = upload(topic, date, videoFile, imageFile, mid, sig, community)
                                     try:
                                         if not Record.objects.filter(mid=mid, platform='bilibili'):
                                             Record.objects.create(mid=mid, platform='bilibili')
@@ -125,7 +125,7 @@ class Command(BaseCommand):
                     logger.error(traceback.format_exc())
 
 
-def upload(topic, date, videoFile, imageFile, mid, community):
+def upload(topic, date, videoFile, imageFile, mid, sig, community):
     """上传视频到b站"""
     sessdata = os.getenv('SESSDATA', '')
     bili_jct = os.getenv('BILI_JCT', '')
@@ -143,7 +143,7 @@ def upload(topic, date, videoFile, imageFile, mid, community):
     data = {
         "copyright": 1,
         "cover": cover_url,
-        "desc": "recordings for {} meetings".format(community),
+        "desc": "openEuler meeting record for {}".format(sig),
         "desc_format_id": 0,
         "dynamic": "",
         "interactive": 0,
