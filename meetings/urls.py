@@ -8,7 +8,7 @@ from meetings.views import LoginView, GroupView, GroupsView, MeetingView, Meetin
     ActivityUpdateView, ActivityDraftView, ActivitiesDraftView, SponsorActivityDraftView, DraftUpdateView, \
     DraftPublishView, SponsorActivitiesPublishingView, ActivityCollectView, ActivityCollectDelView, \
     MyActivityCollectionsView, ActivityRegisterView, ApplicantInfoView, RegisterActivitiesView, ApplicantsInfoView, \
-    FeedbackView, CountActivitiesView, MyCountsView, TicketView
+    FeedbackView, CountActivitiesView, MyCountsView, TicketView, MeetingsRecentlyView
 
 urlpatterns = [
     path('login/', LoginView.as_view()),  # 登陆
@@ -18,6 +18,7 @@ urlpatterns = [
     path('meetings/', MeetingsView.as_view()),  # 新建会议
     path('meetings_weekly/', MeetingsWeeklyView.as_view()),  # 查询前后一周会议详情
     path('meetings_daily/', MeetingsDailyView.as_view()),   # 查询当日会议详情
+    path('meetings_recently/', MeetingsRecentlyView.as_view()),  # 查询近期的会议
     path('meeting/<int:mid>/', MeetingDelView.as_view()),  # 删除会议
     path('meetings/<int:pk>/', MeetingView.as_view()),  # 查询单个会议详情
     path('users_exclude/<int:pk>/', UsersExcludeView.as_view()),  # 查询不在该组的所有成员的nickname、gitee_name、avatar

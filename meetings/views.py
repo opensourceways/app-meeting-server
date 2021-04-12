@@ -202,6 +202,16 @@ class MeetingsDailyView(GenericAPIView, ListModelMixin):
         return self.list(request, *args, **kwargs)
 
 
+class MeetingsRecentlyView(GenericAPIView, ListModelMixin):
+    """查询最近的会议"""
+    serializer_class = MeetingListSerializer
+    queryset = Meeting.objects.filter(is_delete=0, date__gte=datetime.datetime.now().strftime('%Y-%m-%d')).order_by('date','start')
+
+    @swagger_auto_schema(operation_summary='查询最近的会议')
+    def get(self, request, *args, **kwargs):
+        return self.list(request, *args, **kwargs)
+
+
 class MeetingView(GenericAPIView, RetrieveModelMixin):
     """查询会议(id)"""
     serializer_class = MeetingListSerializer
