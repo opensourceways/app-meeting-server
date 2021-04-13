@@ -498,6 +498,8 @@ class MeetingsView(GenericAPIView, CreateModelMixin):
         new_data['password'] = password
         new_data['settings']['waiting_room'] = False
         new_data['settings']['auto_recording'] = record
+        new_data['settings']['join_before_host'] = True
+        new_data['settings']['jbh_time'] = 5
         headers = {
             "content-type": "application/json",
             "authorization": "Bearer {}".format(settings.ZOOM_TOKEN)
