@@ -38,7 +38,7 @@ class Command(BaseCommand):
         try:
             logger.info('start task')
             scheduler = BlockingScheduler()
-            scheduler.add_job(update_activity_status, 'cron', day='*')
+            scheduler.add_job(update_activity_status, 'cron', hour='*')
             scheduler.start()
         except Exception as e:
             logger.error(e)
