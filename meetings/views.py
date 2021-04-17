@@ -205,10 +205,11 @@ class MeetingsDailyView(GenericAPIView, ListModelMixin):
 class MeetingsRecentlyView(GenericAPIView, ListModelMixin):
     """查询最近的会议"""
     serializer_class = MeetingListSerializer
-    queryset = Meeting.objects.filter(is_delete=0, date__gte=datetime.datetime.now().strftime('%Y-%m-%d')).order_by('date','start')
+    queryset = Meeting.objects.filter(is_delete=0)
 
     @swagger_auto_schema(operation_summary='查询最近的会议')
     def get(self, request, *args, **kwargs):
+        self.queryset = self.queryset.filter(date__gte=datetime.datetime.now().strftime('%Y-%m-%d')).order_by('date','start')
         return self.list(request, *args, **kwargs)
 
 
@@ -857,13 +858,13 @@ class ActivitiesView(GenericAPIView, ListModelMixin):
 class RecentActivitiesView(GenericAPIView, ListModelMixin):
     """最近的活动列表"""
     serializer_class = ActivitiesSerializer
-    queryset = Activity.objects.filter(is_delete=0, status__gt=2,
-                                       date__gt=datetime.datetime.now().strftime('%Y-%m-%d')).order_by('-date', 'id')
+    queryset = Activity.objects.filter(is_delete=0)
     filter_backends = [SearchFilter]
     search_fields = ['enterprise']
 
     @swagger_auto_schema(operation_summary='最近的活动列表')
     def get(self, request, *args, **kwargs):
+        self.queryset = self.queryset.filter(status__gt=2, date__gt=datetime.datetime.now().strftime('%Y-%m-%d')).order_by('-date', 'id')
         return self.list(request, *args, **kwargs)
 
 
