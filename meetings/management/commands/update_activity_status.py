@@ -1,6 +1,5 @@
 import datetime
 import logging
-from apscheduler.schedulers.blocking import BlockingScheduler
 from meetings.models import Activity
 from django.core.management import BaseCommand
 
@@ -36,9 +35,6 @@ def update_activity_status():
 class Command(BaseCommand):
     def handle(self, *args, **options):
         try:
-            logger.info('start task')
-            scheduler = BlockingScheduler()
-            scheduler.add_job(update_activity_status, 'cron', hour='*')
-            scheduler.start()
+            update_activity_status()
         except Exception as e:
             logger.error(e)
