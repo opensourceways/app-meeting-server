@@ -18,16 +18,23 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         access_token = settings.CI_BOT_TOKEN
+        genegroup_auth = os.getenv('GENEGROUP_AUTH', '')
         if not access_token:
             self.logger.error('missing CI_BOT_TOKEN, exit...')
+            sys.exit(1)
+        if not genegroup_auth:
+            self.logger.error('missing GENEGROUP_AUTH, exit...')
             sys.exit(1)
         t1 = time.time()
         self.logger.info('Starting to genegroup...')
         mail_lists = []
         headers = {
-            'Authorization': 'Basic b3BlbmV1bGVyc2VydmVyOm9wZW5ldWxlcnNlcnZlckAxMjM0'
+            'Authorization': os.getenv('GENEGROUP_AUTH', '')
         }
         r = requests.get('https://openeuler.org/api/mail/list', headers=headers)
+        if r.status_code == 401:
+            self.logger.error('401 Unauthorized. Do check GENEGROUP_AUTH!')
+            sys.exit(1)
         if r.status_code == 200:
             mail_lists = [x['fqdn_listname'] for x in r.json()['entries']]
         if os.path.exists('sigs.yaml'):
